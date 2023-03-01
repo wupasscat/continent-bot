@@ -2,19 +2,32 @@ import os
 from multiprocessing import managers
 from typing_extensions import Self
 import discord
-from discord.ext import commands
+from discord import app_commands
 import asyncio
-from typing import Any, Dict, Iterator, List, Optional, Tuple, cast
+from typing import Any, Dict, Iterator, List, Optional, Tuple, cast, Literal
 import auraxium
 from dotenv import load_dotenv
+import datetime
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+API_KEY = os.getenv('API_KEY')
+GUILD_ID = os.getenv('GUILD_ID')
 
 # Setup Discord
 intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(intents=intents, command_prefix='!')
+client = discord.Client(intents=intents)
+tree = app_commands.CommandTree(client)
+
+# Server IDs
+world_ids = {
+    'Connery': 1,
+    'Miller': 10,
+    'Cobalt': 13,
+    'Emerald': 17,
+    'Jaeger': 19,
+    'SolTech': 40
+}
 
 # A mapping of zone IDs to the region IDs of their warpgates
 _WARPGATE_IDS: Dict[int, List[int]] = {
@@ -106,48 +119,67 @@ async def _get_open_zones(client: auraxium.Client, world_id: int) -> List[int]:
 
     return open_zones
 
+#server_arg = 'Emerald'
 
-#def __init__(self):
-#    self.queue = asyncio.Queue(1)
-
-async def main():
-    async with auraxium.Client(service_id='s:696969696969') as client:
+async def main(server):
+    async with auraxium.Client(service_id=API_KEY) as client:
 
         # Hard-coded world ID for now
-        server_id = 17  # Emerald
+        #server_id = 17  # Emerald
+        #input_server_arg = await continents(Server)
+
+        # Get corresponding server ID for server name
+        for i in world_ids:
+            if i == server:
+                server_id = world_ids[i]
+
+        #server_id = world_ids[Server]
+        print(server_id)
 
         # Perform hacky magic
         open_continents = await _get_open_zones(client, server_id)
 
         # Report results
         continents_str = ", ".join(_ZONE_NAMES[s] for s in open_continents)
-        print(f"{len(open_continents)} continents are open: {continents_str}")
-        return continents_str
+        print(f"{len(open_continents)} continents are open on {server}: {continents_str}")
+        #return continents_str
+        open_continents_list = []
+        for s in open_continents:
+            open_continents_list.append(_ZONE_NAMES[s])
+        return open_continents_list
 
 # Discord bot stuff
 
-@bot.event
+# /continents
+# , guild=discord.Object(id=873908844806434846)
+@tree.command(name = "continents", description = "See open continents on a server", autocomplete=True, guild=discord.Object(id=873908844806434846)) #Add the guild ids in which the slash command will appear. If it should be in all, remove the argument, but note that it will take some time (up to an hour) to register the command if it's for all guilds.
+async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt', 'Emerald', 'Jaeger', 'SolTech']):
+    continentsList = await main(server)
+    status = {
+        'Amerish': ":red_circle: Closed",
+        'Esamir': ":red_circle: Closed",
+        'Hossin': ":red_circle: Closed",
+        'Indar': ":red_circle: Closed",
+        'Oshur': ":red_circle: Closed"
+    }
+    for i in continentsList:
+        if i in status:
+            status[i] = ":green_circle: Open  "
+    # Embed
+    embedVar = discord.Embed(
+    title=server, description=f"Continents open: {len(continentsList)}", color=0x5865F2, timestamp=discord.utils.utcnow())
+    embedVar.add_field(name="Amerish", value=status["Amerish"], inline=True)
+    embedVar.add_field(name="Esamir", value=status["Esamir"], inline=True)
+    embedVar.add_field(name="Hossin", value=status["Hossin"], inline=True)
+    embedVar.add_field(name="Indar", value=status["Indar"], inline=True)
+    embedVar.add_field(name="Oshur", value=status["Oshur"], inline=True)
+    embedVar.add_field(name="\u200B", value="\u200B", inline=True)
+    embedVar.set_footer(text="github.com/wupasscat", icon_url="https://raw.githubusercontent.com/wupasscat/wupasscat/main/profile.png")
+    await interaction.response.send_message(embed=embedVar)
+
+@client.event
 async def on_ready():
-    print('Bot has logged in as {0.user}'.format(bot))
+    await tree.sync(guild=discord.Object(id=873908844806434846))
+    print('Bot has logged in as {0.user}'.format(client))
 
-#    await bot.change_presence(status=discord.Status.idle, activity=discord.Game(name="waiting"))
-#    continentsList = await main()
-#    if "Oshur" in continentsList: # PAIN
-#       await bot.change_presence(status=discord.Status.online, activity=discord.Game(name="Oshur is OPEN"))
-#
-#    else:
-#        await bot.change_presence(status=discord.Status.do_not_disturb, activity=discord.Game(name="Oshur is CLOSED"))
-print("test 0")
-@bot.command(name='99', help='test')
-async def continents(ctx):
-    continentsList = await main()
-    print(continentsList)
-    response = "Open Continents: " + continentsList
-    print("Response: ", response, type(response))
-    await ctx.send(response)
-
-# TO-DO
-# - Make fancy messages (include all continents + status)
-
-asyncio.get_event_loop().run_until_complete(main())
-bot.run(TOKEN)
+client.run(TOKEN)
