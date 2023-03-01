@@ -129,8 +129,6 @@ async def main(server):
             if i == server: # server input from user
                 server_id = world_ids[i]
 
-        print(server_id)
-
         # Perform hacky magic
         open_continents = await _get_open_zones(client, server_id)
 
