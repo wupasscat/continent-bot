@@ -151,8 +151,8 @@ async def main(server):
 # Discord bot stuff
 
 # /continents
-# , guild=discord.Object(id=873908844806434846)
-@tree.command(name = "continents", description = "See open continents on a server", autocomplete=True, guild=discord.Object(id=873908844806434846)) #Add the guild ids in which the slash command will appear. If it should be in all, remove the argument, but note that it will take some time (up to an hour) to register the command if it's for all guilds.
+# , guild=discord.Object(id=GUILD_ID)
+@tree.command(name = "continents", description = "See open continents on a server") #Add the guild ids in which the slash command will appear. If it should be in all, remove the argument, but note that it will take some time (up to an hour) to register the command if it's for all guilds.
 async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt', 'Emerald', 'Jaeger', 'SolTech']):
     continentsList = await main(server)
     status = {
