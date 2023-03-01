@@ -1,5 +1,6 @@
 # <img src="https://i.imgur.com/83v10CK.png" align="left" height="140"/>continent-bot
-A Discord bot written in Python for [Planetside 2](https://www.planetside2.com/home) that checks which continents are open on a server so you don't have to.<br /><br />
+A Discord bot written in Python for [Planetside 2](https://www.planetside2.com/home) that checks which continents are open on a server so you don't have to.  
+[![ci](https://github.com/wupasscat/continent-bot/actions/workflows/main.yml/badge.svg)](https://github.com/wupasscat/continent-bot/actions/workflows/main.yml)
 ## Features
  * [x] Uses slash commands
  * [x] Simple output
