@@ -23,8 +23,7 @@ This assumes you already have a Discord bot set up
 
 ## To-Do
  * [ ] Make better readme
- * [ ] https://github.com/wupasscat/continent-bot/issues/1
- * [ ] https://github.com/wupasscat/continent-bot/issues/2
+ * [ ] [See Issues](https://github.com/wupasscat/continent-bot/issues)
  * [ ] Cogs?
 
 ## Credits
