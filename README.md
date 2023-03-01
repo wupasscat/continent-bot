@@ -3,7 +3,7 @@ A Discord bot for Planetside 2 that checks which continents are open on a server
 ## Usage
 1. **[Invite Bot](https://discord.com/oauth2/authorize?client_id=1080145429632663623&permissions=274877958208&scope=bot%20applications.commands)**  
 2. Summon the bot with `/continents` and input a server
-
+***
 ## Setup
 This assumes you already have a Discord bot set up
 1. Clone this repo
