@@ -179,7 +179,7 @@ async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt',
 
 @client.event
 async def on_ready():
-    await tree.sync(guild=discord.Object(id=873908844806434846))
+    await tree.sync() # guild=discord.Object(id=GUILD_ID)
     print('Bot has logged in as {0.user}'.format(client))
 
 client.run(TOKEN)
