@@ -7,12 +7,24 @@ import asyncio
 from typing import Any, Dict, Iterator, List, Optional, Tuple, cast, Literal
 import auraxium
 from dotenv import load_dotenv
-import datetime
 
-load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
-API_KEY = os.getenv('API_KEY')
-GUILD_ID = os.getenv('GUILD_ID')
+# Check if bot.py is in a container
+def is_docker():
+    path = '/proc/self/cgroup'
+    return (
+        os.path.exists('/.dockerenv') or
+        os.path.isfile(path) and any('docker' in line for line in open(path))
+    )
+# Change secrets variables accordingly
+if is_docker() == True: # Use Docker ENV variables
+    TOKEN = os.environ['DISCORD_TOKEN']
+    API_KEY = os.environ['CENSUS_API_KEY']
+    GUILD_ID = os.environ['GUILD_IDS']
+else: # Use .env file for secrets
+    load_dotenv()
+    TOKEN = os.getenv('DISCORD_TOKEN')
+    API_KEY = os.getenv('API_KEY')
+    GUILD_ID = os.getenv('GUILD_ID')
 
 # Setup Discord
 intents = discord.Intents.default()
@@ -119,30 +131,24 @@ async def _get_open_zones(client: auraxium.Client, world_id: int) -> List[int]:
 
     return open_zones
 
-#server_arg = 'Emerald'
-
 async def main(server):
     async with auraxium.Client(service_id=API_KEY) as client:
 
-        # Hard-coded world ID for now
-        #server_id = 17  # Emerald
-        #input_server_arg = await continents(Server)
+        # Hard-coded world ID
+        # server_id = 17  # Emerald
 
         # Get corresponding server ID for server name
         for i in world_ids:
-            if i == server:
+            if i == server: # server input from user
                 server_id = world_ids[i]
-
-        #server_id = world_ids[Server]
-        print(server_id)
 
         # Perform hacky magic
         open_continents = await _get_open_zones(client, server_id)
 
-        # Report results
+        # Print results
         continents_str = ", ".join(_ZONE_NAMES[s] for s in open_continents)
         print(f"{len(open_continents)} continents are open on {server}: {continents_str}")
-        #return continents_str
+        # Return results as list
         open_continents_list = []
         for s in open_continents:
             open_continents_list.append(_ZONE_NAMES[s])
@@ -151,10 +157,10 @@ async def main(server):
 # Discord bot stuff
 
 # /continents
-# , guild=discord.Object(id=GUILD_ID)
-@tree.command(name = "continents", description = "See open continents on a server") #Add the guild ids in which the slash command will appear. If it should be in all, remove the argument, but note that it will take some time (up to an hour) to register the command if it's for all guilds.
+@tree.command(name = "continents", description = "See open continents on a server") # Add guild=discord.Object(id=GUILD_ID) if you dont want to wait for discord to register your command
 async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt', 'Emerald', 'Jaeger', 'SolTech']):
-    continentsList = await main(server)
+    continentsList = await main(server) # get open continents from auraxium and send user selected server to main()
+    # Store initial continent status for embed
     status = {
         'Amerish': ":red_circle: Closed",
         'Esamir': ":red_circle: Closed",
@@ -162,6 +168,7 @@ async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt',
         'Indar': ":red_circle: Closed",
         'Oshur': ":red_circle: Closed"
     }
+    # Update status if Planetside api response contains continent
     for i in continentsList:
         if i in status:
             status[i] = ":green_circle: Open  "
@@ -179,7 +186,7 @@ async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt',
 
 @client.event
 async def on_ready():
-    await tree.sync() # guild=discord.Object(id=GUILD_ID)
+    await tree.sync() # Add guild=discord.Object(id=GUILD_ID) if you dont want to wait for discord to register your command
     print('Bot has logged in as {0.user}'.format(client))
 
 client.run(TOKEN)
