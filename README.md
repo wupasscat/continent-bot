@@ -28,5 +28,6 @@ This assumes you already have a Discord bot set up
 
 ## Credits
 - [Auraxium](https://github.com/leonhard-s/auraxium)
-- [discord.py](https://github.com/Rapptz/discord.py)
+- [discord.py](https://github.com/Rapptz/discord.py)  
+
 Special thanks to [leonhard-s](https://github.com/leonhard-s)
