@@ -26,6 +26,10 @@ This assumes you already have a Discord bot set up
  * [ ] [See Issues](https://github.com/wupasscat/continent-bot/issues)
  * [ ] Cogs?
 
+## Contributing 
+File bug reports or suggest new features and changes by creating an [Issue](https://github.com/wupasscat/continent-bot/issues/)  
+Feel free to create a pull request
+
 ## Credits
 - [Auraxium](https://github.com/leonhard-s/auraxium)
 - [discord.py](https://github.com/Rapptz/discord.py)  
