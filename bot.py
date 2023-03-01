@@ -8,10 +8,23 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, cast, Literal
 import auraxium
 from dotenv import load_dotenv
 
-load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
-API_KEY = os.getenv('API_KEY')
-GUILD_ID = os.getenv('GUILD_ID')
+# Check if bot.py is in a container
+def is_docker():
+    path = '/proc/self/cgroup'
+    return (
+        os.path.exists('/.dockerenv') or
+        os.path.isfile(path) and any('docker' in line for line in open(path))
+    )
+# Change secrets variables accordingly
+if is_docker() == True: # Use Docker ENV variables
+    TOKEN = os.environ['DISCORD_TOKEN']
+    API_KEY = os.environ['CENSUS_API_KEY']
+    GUILD_ID = os.environ['GUILD_IDS']
+else: # Use .env file for secrets
+    load_dotenv()
+    TOKEN = os.getenv('DISCORD_TOKEN')
+    API_KEY = os.getenv('API_KEY')
+    GUILD_ID = os.getenv('GUILD_ID')
 
 # Setup Discord
 intents = discord.Intents.default()
