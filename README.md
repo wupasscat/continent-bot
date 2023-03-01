@@ -1,5 +1,5 @@
 # <img src="https://i.imgur.com/83v10CK.png" align="left" height="140"/>continent-bot
-A Discord bot for Planetside 2 that checks which continents are open on a server so you don't have to.<br /><br />
+A Discord bot for [Planetside 2](https://www.planetside2.com/home) that checks which continents are open on a server so you don't have to.<br /><br />
 ## Features
  * [x] Uses slash commands
  * [x] Simple output
@@ -26,6 +26,7 @@ This assumes you already have a Discord bot set up
  * [ ] Add refresh button
  * [ ] Cogs?
 
-## Projects Used
+## Credits
 - [Auraxium](https://github.com/leonhard-s/auraxium)
 - [discord.py](https://github.com/Rapptz/discord.py)
+Special thanks to [leonhard-s](https://github.com/leonhard-s)
