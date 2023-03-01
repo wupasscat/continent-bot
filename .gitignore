@@ -16,6 +16,7 @@ eggs/
 .eggs/
 lib/
 lib64/
+lib64
 parts/
 sdist/
 var/
@@ -111,7 +112,7 @@ env.bak/
 venv.bak/
 bin/
 include/
-pyenv.cfg
+pyvenv.cfg
 
 # Spyder project settings
 .spyderproject
@@ -133,3 +134,5 @@ dmypy.json
 
 # VSCode
 .vscode/
+
+
