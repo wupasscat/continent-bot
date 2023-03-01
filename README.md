@@ -2,8 +2,8 @@
 A Discord bot written in Python for [Planetside 2](https://www.planetside2.com/home) that checks which continents are open on a server so you don't have to.  
 [![CI](https://github.com/wupasscat/continent-bot/actions/workflows/main.yml/badge.svg)](https://github.com/wupasscat/continent-bot/actions/workflows/main.yml)
 ## Features
- * [x] Uses slash commands
- * [x] Simple output
+✅ Uses slash commands  
+✅ Simple output
 ## Usage
 1. **[Invite Bot](https://discord.com/oauth2/authorize?client_id=1080145429632663623&permissions=274877958208&scope=bot%20applications.commands)**  
 2. Summon the bot with `/continents` and input a server
