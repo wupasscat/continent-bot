@@ -24,7 +24,7 @@ else: # Use .env file for secrets
     load_dotenv()
     TOKEN = os.getenv('DISCORD_TOKEN')
     API_KEY = os.getenv('API_KEY')
-    GUILD_ID = os.getenv('GUILD_ID')
+    GUILD_ID = os.getenv('GUILD_IDS')
 
 # Setup Discord
 intents = discord.Intents.default()
