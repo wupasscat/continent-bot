@@ -10,25 +10,6 @@ A Discord bot written in Python for [Planetside 2](https://www.planetside2.com/h
 ## Self-Hosting
 [See wiki](https://github.com/wupasscat/continent-bot/wiki/Docker)
 ***
-## Setup (For advanced users)
-This assumes you already have a Discord bot set up
-1. Clone this repo
-2. Create `.env` file with these contents:
-    
-    ```python
-    # .env
-    DISCORD_TOKEN=your discord bot token
-    API_KEY=s:example
-    ```
-    
-3. Use pip to install `auraxium` and `discord.py`
-4. Run `bot.py`
-
-## To-Do
- * [ ] Make better readme
- * [ ] [See Issues](https://github.com/wupasscat/continent-bot/issues)
- * [ ] Cogs?
-
 ## Contributing 
 File bug reports or suggest new features and changes by creating an [Issue](https://github.com/wupasscat/continent-bot/issues/)  
 Feel free to create a pull request
