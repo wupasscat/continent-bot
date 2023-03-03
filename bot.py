@@ -148,38 +148,42 @@ async def main(server):
         # Print results
         continents_str = ", ".join(_ZONE_NAMES[s] for s in open_continents)
         print(f"{len(open_continents)} continents are open on {server}: {continents_str}")
-        # Return results as list
-        open_continents_list = []
+
+        # Name open continents
+        named_open_continents = []
         for s in open_continents:
-            open_continents_list.append(_ZONE_NAMES[s])
-        return open_continents_list
+            named_open_continents.append(_ZONE_NAMES[s])
+
+        continent_status = {
+            'num_open': 0,
+            'Amerish': ":red_circle: Closed",
+            'Esamir': ":red_circle: Closed",
+            'Hossin': ":red_circle: Closed",
+            'Indar': ":red_circle: Closed",
+            'Oshur': ":red_circle: Closed"
+        }
+        # Update continent_status with open continents
+        for i in named_open_continents:
+            if i in continent_status:
+                continent_status[i] = ":green_circle: Open  "
+        
+        continent_status['num_open'] = len(open_continents) # Set number of open continents
+        return continent_status
 
 # Discord bot stuff
 
 # /continents
 @tree.command(name = "continents", description = "See open continents on a server") # Add guild=discord.Object(id=GUILD_ID) if you dont want to wait for discord to register your command
 async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt', 'Emerald', 'Jaeger', 'SolTech']):
-    continentsList = await main(server) # get open continents from auraxium and send user selected server to main()
-    # Store initial continent status for embed
-    status = {
-        'Amerish': ":red_circle: Closed",
-        'Esamir': ":red_circle: Closed",
-        'Hossin': ":red_circle: Closed",
-        'Indar': ":red_circle: Closed",
-        'Oshur': ":red_circle: Closed"
-    }
-    # Update status if Planetside api response contains continent
-    for i in continentsList:
-        if i in status:
-            status[i] = ":green_circle: Open  "
+    continent_status = await main(server) # get open continents from auraxium and send user selected server to main()
     # Embed
     embedVar = discord.Embed(
-    title=server, description=f"Continents open: {len(continentsList)}", color=0x5865F2, timestamp=discord.utils.utcnow())
-    embedVar.add_field(name="Amerish", value=status["Amerish"], inline=True)
-    embedVar.add_field(name="Esamir", value=status["Esamir"], inline=True)
-    embedVar.add_field(name="Hossin", value=status["Hossin"], inline=True)
-    embedVar.add_field(name="Indar", value=status["Indar"], inline=True)
-    embedVar.add_field(name="Oshur", value=status["Oshur"], inline=True)
+    title=server, description=f"Continents open: {continent_status['num_open']}", color=0x5865F2, timestamp=discord.utils.utcnow())
+    embedVar.add_field(name="Amerish", value=continent_status["Amerish"], inline=True)
+    embedVar.add_field(name="Esamir", value=continent_status["Esamir"], inline=True)
+    embedVar.add_field(name="Hossin", value=continent_status["Hossin"], inline=True)
+    embedVar.add_field(name="Indar", value=continent_status["Indar"], inline=True)
+    embedVar.add_field(name="Oshur", value=continent_status["Oshur"], inline=True)
     embedVar.add_field(name="\u200B", value="\u200B", inline=True)
     embedVar.set_footer(text="github.com/wupasscat", icon_url="https://raw.githubusercontent.com/wupasscat/wupasscat/main/profile.png")
     await interaction.response.send_message(embed=embedVar)
