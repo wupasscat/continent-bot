@@ -23,12 +23,10 @@ def is_docker():
 if is_docker() == True: # Use Docker ENV variables
     TOKEN = os.environ['DISCORD_TOKEN']
     API_KEY = os.environ['CENSUS_API_KEY']
-    GUILD_ID = os.environ['GUILD_IDS']
 else: # Use .env file for secrets
     load_dotenv()
     TOKEN = os.getenv('DISCORD_TOKEN')
     API_KEY = os.getenv('API_KEY')
-    GUILD_ID = os.getenv('GUILD_IDS')
 
 # Configure logging
 class CustomFormatter(logging.Formatter): # Formatter
@@ -179,7 +177,7 @@ async def main(server):
         for i in world_ids:
             if i == server: # server input from user
                 server_id = world_ids[i]
-                
+
         # Perform hacky magic
         open_continents = await _get_open_zones(client, server_id)
         # Print results
@@ -216,7 +214,7 @@ class Buttons(discord.ui.View):
         await interaction.response.edit_message(content=f"This is an edited button response!", view=self)
 
 # /continents
-@tree.command(name = "continents", description = "See open continents on a server") # Add guild=discord.Object(id=GUILD_ID) if you dont want to wait for discord to register your command
+@tree.command(name = "continents", description = "See open continents on a server")
 async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt', 'Emerald', 'Jaeger', 'SolTech']):
     logger.info(f"Command /continents triggered for server {server}!")
     t = time.perf_counter()
@@ -237,7 +235,7 @@ async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt',
 
 @client.event
 async def on_ready():
-    await tree.sync() # Add guild=discord.Object(id=GUILD_ID) if you dont want to wait for discord to register your command
+    await tree.sync()
     logger.info('Bot has logged in as {0.user}'.format(client))
 
 client.run(TOKEN, log_handler=None)
