@@ -2,12 +2,15 @@ import os
 from multiprocessing import managers
 from typing_extensions import Self
 import discord
+import logging
+import logging.handlers
 from discord import app_commands
 from discord import ui
 import asyncio
 from typing import Any, Dict, Iterator, List, Optional, Tuple, cast, Literal
 import auraxium
 from dotenv import load_dotenv
+import time
 
 # Check if bot.py is in a container
 def is_docker():
@@ -26,6 +29,41 @@ else: # Use .env file for secrets
     TOKEN = os.getenv('DISCORD_TOKEN')
     API_KEY = os.getenv('API_KEY')
     GUILD_ID = os.getenv('GUILD_IDS')
+
+# Configure logging
+class CustomFormatter(logging.Formatter): # Formatter
+
+    grey = "\x1b[38;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
+
+    FORMATS = {
+        logging.DEBUG: grey + format + reset,
+        logging.INFO: grey + format + reset,
+        logging.WARNING: yellow + format + reset,
+        logging.ERROR: red + format + reset,
+        logging.CRITICAL: bold_red + format + reset
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        dt_fmt = '%m/%d/%Y %I:%M:%S'
+        formatter = logging.Formatter(log_fmt, dt_fmt)
+        return formatter.format(record)
+
+# Create logger
+logging.getLogger('discord.http').setLevel(logging.INFO)
+logger = logging.getLogger('discord')
+logger.setLevel(logging.INFO)
+
+handler = logging.StreamHandler()
+handler.setFormatter(CustomFormatter())
+logger.addHandler(handler)
+# Disable VoiceClient warnings
+discord.VoiceClient.warn_nacl = False
 
 # Setup Discord
 intents = discord.Intents.default()
@@ -141,14 +179,12 @@ async def main(server):
         for i in world_ids:
             if i == server: # server input from user
                 server_id = world_ids[i]
-
+                
         # Perform hacky magic
         open_continents = await _get_open_zones(client, server_id)
-
         # Print results
         continents_str = ", ".join(_ZONE_NAMES[s] for s in open_continents)
-        print(f"{len(open_continents)} continents are open on {server}: {continents_str}")
-
+        logger.info(f"{len(open_continents)} continents are open on {server}: {continents_str}")
         # Name open continents
         named_open_continents = []
         for s in open_continents:
@@ -166,7 +202,6 @@ async def main(server):
         for i in named_open_continents:
             if i in continent_status:
                 continent_status[i] = ":green_circle: Open  "
-        
         continent_status['num_open'] = len(open_continents) # Set number of open continents
         return continent_status
 
@@ -181,9 +216,13 @@ class Buttons(discord.ui.View):
         await interaction.response.edit_message(content=f"This is an edited button response!", view=self)
 
 # /continents
-@tree.command(name = "continents", description = "See open continents on a server", guild=discord.Object(id=GUILD_ID)) # Add guild=discord.Object(id=GUILD_ID) if you dont want to wait for discord to register your command
+@tree.command(name = "continents", description = "See open continents on a server") # Add guild=discord.Object(id=GUILD_ID) if you dont want to wait for discord to register your command
 async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt', 'Emerald', 'Jaeger', 'SolTech']):
+    logger.info(f"Command /continents triggered for server {server}!")
+    t = time.perf_counter()
     continent_status = await main(server) # get open continents from auraxium and send user selected server to main()
+    elapsed = time.perf_counter() - t
+    logger.info(f"Response took {round(elapsed, 2)}s")
     # Embed
     embedVar = discord.Embed(
     title=server, description=f"Continents open: {continent_status['num_open']}", color=0x5865F2, timestamp=discord.utils.utcnow())
@@ -193,12 +232,12 @@ async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt',
     embedVar.add_field(name="Indar", value=continent_status["Indar"], inline=True)
     embedVar.add_field(name="Oshur", value=continent_status["Oshur"], inline=True)
     embedVar.add_field(name="\u200B", value="\u200B", inline=True)
-    embedVar.set_footer(text="github.com/wupasscat", icon_url="https://raw.githubusercontent.com/wupasscat/wupasscat/main/profile.png")
+    embedVar.set_footer(text=f"Completed in {round(elapsed, 2)}s", icon_url="https://raw.githubusercontent.com/wupasscat/wupasscat/main/profile.png")
     await interaction.response.send_message(embed=embedVar, view=Buttons())
 
 @client.event
 async def on_ready():
-    await tree.sync(guild=discord.Object(id=GUILD_ID)) # Add guild=discord.Object(id=GUILD_ID) if you dont want to wait for discord to register your command
-    print('Bot has logged in as {0.user}'.format(client))
+    await tree.sync() # Add guild=discord.Object(id=GUILD_ID) if you dont want to wait for discord to register your command
+    logger.info('Bot has logged in as {0.user}'.format(client))
 
-client.run(TOKEN)
+client.run(TOKEN, log_handler=None)
