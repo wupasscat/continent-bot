@@ -3,6 +3,7 @@ from multiprocessing import managers
 from typing_extensions import Self
 import discord
 from discord import app_commands
+from discord import ui
 import asyncio
 from typing import Any, Dict, Iterator, List, Optional, Tuple, cast, Literal
 import auraxium
@@ -133,8 +134,7 @@ async def _get_open_zones(client: auraxium.Client, world_id: int) -> List[int]:
 
 async def main(server):
     async with auraxium.Client(service_id=API_KEY) as client:
-
-        # Hard-coded world ID
+        #  Hard-coded world ID
         # server_id = 17  # Emerald
 
         # Get corresponding server ID for server name
@@ -172,8 +172,16 @@ async def main(server):
 
 # Discord bot stuff
 
+class Buttons(discord.ui.View):
+    def __init__(self, *, timeout=180):
+        super().__init__(timeout=timeout)
+    @discord.ui.button(label="Button",style=discord.ButtonStyle.primary)
+    async def blurple_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        button.style=discord.ButtonStyle.success
+        await interaction.response.edit_message(content=f"This is an edited button response!", view=self)
+
 # /continents
-@tree.command(name = "continents", description = "See open continents on a server") # Add guild=discord.Object(id=GUILD_ID) if you dont want to wait for discord to register your command
+@tree.command(name = "continents", description = "See open continents on a server", guild=discord.Object(id=GUILD_ID)) # Add guild=discord.Object(id=GUILD_ID) if you dont want to wait for discord to register your command
 async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt', 'Emerald', 'Jaeger', 'SolTech']):
     continent_status = await main(server) # get open continents from auraxium and send user selected server to main()
     # Embed
@@ -186,11 +194,11 @@ async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt',
     embedVar.add_field(name="Oshur", value=continent_status["Oshur"], inline=True)
     embedVar.add_field(name="\u200B", value="\u200B", inline=True)
     embedVar.set_footer(text="github.com/wupasscat", icon_url="https://raw.githubusercontent.com/wupasscat/wupasscat/main/profile.png")
-    await interaction.response.send_message(embed=embedVar)
+    await interaction.response.send_message(embed=embedVar, view=Buttons())
 
 @client.event
 async def on_ready():
-    await tree.sync() # Add guild=discord.Object(id=GUILD_ID) if you dont want to wait for discord to register your command
+    await tree.sync(guild=discord.Object(id=GUILD_ID)) # Add guild=discord.Object(id=GUILD_ID) if you dont want to wait for discord to register your command
     print('Bot has logged in as {0.user}'.format(client))
 
 client.run(TOKEN)
