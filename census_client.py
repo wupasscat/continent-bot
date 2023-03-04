@@ -8,6 +8,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, cast, Literal
 import auraxium
 from dotenv import load_dotenv
 import time
+import sqlite3
 
 # Check if bot.py is in a container
 def is_docker():
@@ -22,6 +23,75 @@ if is_docker() == True: # Use Docker ENV variables
 else: # Use .env file for secrets
     load_dotenv()
     API_KEY = os.getenv('API_KEY')
+
+# Setup sqlite
+conn = sqlite3.connect('continents.db')
+
+sql_create_connery_table = """ CREATE TABLE IF NOT EXISTS connery (
+                                    id integer PRIMARY KEY,
+                                    continent text,
+                                    status text
+                                ); """
+sql_create_miller_table = """ CREATE TABLE IF NOT EXISTS miller (
+                                    id integer PRIMARY KEY,
+                                    continent text,
+                                    status text
+                                ); """
+
+sql_create_cobalt_table = """ CREATE TABLE IF NOT EXISTS cobalt (
+                                    id integer PRIMARY KEY,
+                                    continent text,
+                                    status text
+                                ); """
+sql_create_emerald_table = """ CREATE TABLE IF NOT EXISTS emerald (
+                                    id integer PRIMARY KEY,
+                                    continent text,
+                                    status text
+                                ); """
+sql_create_jaeger_table = """ CREATE TABLE IF NOT EXISTS jaeger (
+                                    id integer PRIMARY KEY,
+                                    continent text,
+                                    status text
+                                ); """
+
+sql_create_soltech_table = """ CREATE TABLE IF NOT EXISTS soltech (
+                                    id integer PRIMARY KEY,
+                                    continent text,
+                                    status text
+                                ); """
+
+cur = conn.cursor()
+
+cur.execute(sql_create_connery_table)
+cur.execute(sql_create_miller_table)
+cur.execute(sql_create_cobalt_table)
+cur.execute(sql_create_emerald_table)
+cur.execute(sql_create_jaeger_table)
+cur.execute(sql_create_soltech_table)
+
+connery = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
+cur.executemany("INSERT INTO connery VALUES(?, ?, ?);", connery)
+conn.commit()
+miller = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
+cur.executemany("INSERT INTO miller VALUES(?, ?, ?);", miller)
+conn.commit()
+cobalt = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
+cur.executemany("INSERT INTO cobalt VALUES(?, ?, ?);", cobalt)
+conn.commit()
+emerald = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
+cur.executemany("INSERT INTO emerald VALUES(?, ?, ?);", emerald)
+conn.commit()
+jaeger = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
+cur.executemany("INSERT INTO jaeger VALUES(?, ?, ?);", jaeger)
+conn.commit()
+soltech = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
+cur.executemany("INSERT INTO soltech VALUES(?, ?, ?);", soltech)
+conn.commit()
+
+print('\nOriginal Table:')
+original = conn.execute("SELECT * FROM emerald")
+for row in original:
+    print(row)
 
 # Configure logging
 class CustomFormatter(logging.Formatter): # Formatter
@@ -155,38 +225,55 @@ async def _get_open_zones(client: auraxium.Client, world_id: int) -> List[int]:
 
     return open_zones
 
-async def main(server):
+async def main():
     async with auraxium.Client(service_id=API_KEY) as client:
-        #  Hard-coded world ID
-        # server_id = 17  # Emerald
-
-        # Get corresponding server ID for server name
-        for i in world_ids:
-            if i == server: # server input from user
-                server_id = world_ids[i]
-
-        # Perform hacky magic
-        open_continents = await _get_open_zones(client, server_id)
-        # Print results
-        continents_str = ", ".join(_ZONE_NAMES[s] for s in open_continents)
-        logger.info(f"{len(open_continents)} continents are open on {server}: {continents_str}")
-        # Name open continents
-        named_open_continents = []
-        for s in open_continents:
-            named_open_continents.append(_ZONE_NAMES[s])
-
-        continent_status = {
-            'num_open': 0,
-            'Amerish': ":red_circle: Closed",
-            'Esamir': ":red_circle: Closed",
-            'Hossin': ":red_circle: Closed",
-            'Indar': ":red_circle: Closed",
-            'Oshur': ":red_circle: Closed"
-        }
-        # Update continent_status with open continents
-        for i in named_open_continents:
-            if i in continent_status:
-                continent_status[i] = ":green_circle: Open  "
-        continent_status['num_open'] = len(open_continents) # Set number of open continents
-        return continent_status
-
+        for i in world_ids: # Servers (named)
+            server_id = world_ids[i] # Save server id
+            open_continents = await _get_open_zones(client, server_id) # Get open continents of server_id
+            # List open continents with names
+            named_open_continents = []
+            for s in open_continents:
+                named_open_continents.append(_ZONE_NAMES[s])
+            
+            continent_status = {
+                'Amerish': 'closed',
+                'Esamir': 'closed',
+                'Hossin': 'closed',
+                'Indar': 'closed',
+                'Oshur': 'closed'
+            }
+            for s in named_open_continents:
+                if s in continent_status:
+                    continent_status[s] = 'open'
+            if i == 'Connery':
+                connery = [('1', continent_status['Amerish']), ('2', continent_status['Esamir']), ('3', continent_status['Hossin']), ('4', continent_status['Indar']), ('5', continent_status['Oshur'])]
+                cur.executemany("UPDATE connery SET status = ? WHERE id = ?;", connery)
+                conn.commit()
+            elif i == 'Miller':
+                miller = [('1', continent_status['Amerish']), ('2', continent_status['Esamir']), ('3', continent_status['Hossin']), ('4', continent_status['Indar']), ('5', continent_status['Oshur'])]
+                cur.executemany("UPDATE miller SET status = ? WHERE id = ?;", miller)
+                conn.commit()
+            elif i == 'Cobalt':
+                cobalt = [('1', continent_status['Amerish']), ('2', continent_status['Esamir']), ('3', continent_status['Hossin']), ('4', continent_status['Indar']), ('5', continent_status['Oshur'])]
+                cur.executemany("UPDATE cobalt SET status = ? WHERE id = ?;", cobalt)
+                conn.commit()
+            elif i == 'Emerald':
+                emerald = [('1', 'test'), ('2', continent_status['Esamir']), ('3', continent_status['Hossin']), ('4', continent_status['Indar']), ('5', continent_status['Oshur'])]
+                cur.executemany("UPDATE emerald SET status = ? WHERE id = ?;", emerald)
+                conn.commit()
+            elif i == 'Jaeger':
+                jaeger = [('1', continent_status['Amerish']), ('2', continent_status['Esamir']), ('3', continent_status['Hossin']), ('4', continent_status['Indar']), ('5', continent_status['Oshur'])]
+                cur.executemany("UPDATE jaeger SET status = ? WHERE id = ?;", jaeger)
+                conn.commit()
+            elif i == 'SolTech':
+                soltech = [('1', continent_status['Amerish']), ('2', continent_status['Esamir']), ('3', continent_status['Hossin']), ('4', continent_status['Indar']), ('5', continent_status['Oshur'])]
+                cur.executemany("UPDATE soltech SET status = ? WHERE id = ?;", soltech)
+                conn.commit()
+            
+             #continent_status['Amerish']
+asyncio.get_event_loop().run_until_complete(main()) 
+print('\nNew Table:')
+new = conn.execute("SELECT * FROM emerald")
+for row in new:
+    print(row)
+conn.close()
