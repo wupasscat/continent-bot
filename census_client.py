@@ -1,14 +1,13 @@
-import os
-from multiprocessing import managers
-from typing_extensions import Self
+import asyncio
 import logging
 import logging.handlers
-import asyncio
-from typing import Any, Dict, Iterator, List, Optional, Tuple, cast, Literal
+import os
+import sqlite3
+import time
+from sqlite3 import Error
+from typing import Any, Dict, Iterator, List, Optional, Tuple, cast
 import auraxium
 from dotenv import load_dotenv
-import time
-import sqlite3
 
 # Check if bot.py is in a container
 def is_docker():
@@ -17,14 +16,62 @@ def is_docker():
         os.path.exists('/.dockerenv') or
         os.path.isfile(path) and any('docker' in line for line in open(path))
     )
+docker = is_docker()
 # Change secrets variables accordingly
-if is_docker() == True: # Use Docker ENV variables
+if docker == True: # Use Docker ENV variables
     API_KEY = os.environ['CENSUS_API_KEY']
+    LOG_LEVEL = os.environ['LOG_LEVEL']
 else: # Use .env file for secrets
     load_dotenv()
     API_KEY = os.getenv('API_KEY')
+    LOG_LEVEL = os.getenv('LOG_LEVEL')
+
+DEBUG = logging.DEBUG
+INFO = logging.INFO
+WARNING = logging.WARNING
+ERROR = logging.ERROR
+CRITICAL = logging.CRITICAL
+
+# Configure logging
+class CustomFormatter(logging.Formatter):
+
+    grey = "\x1b[38;20m"
+    blue = "\x1b[34m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
+
+    FORMATS = {
+        logging.DEBUG: grey + format + reset,
+        logging.INFO: blue + format + reset,
+        logging.WARNING: yellow + format + reset,
+        logging.ERROR: red + format + reset,
+        logging.CRITICAL: bold_red + format + reset
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        dt_fmt = '%m/%d/%Y %I:%M:%S'
+        formatter = logging.Formatter(log_fmt, dt_fmt)
+        return formatter.format(record)
+
+# Create logger
+log = logging.getLogger('census')
+if LOG_LEVEL is None:
+    log.setLevel(logging.INFO)
+else:
+    log.setLevel(LOG_LEVEL)
+
+handler = logging.StreamHandler()
+handler.setFormatter(CustomFormatter())
+log.addHandler(handler)
 
 # Setup sqlite
+fp = open('continents.db') # Create db file if it doesn't exist
+fp.close()
+
 conn = sqlite3.connect('continents.db')
 
 sql_create_connery_table = """ CREATE TABLE IF NOT EXISTS connery (
@@ -69,70 +116,36 @@ cur.execute(sql_create_emerald_table)
 cur.execute(sql_create_jaeger_table)
 cur.execute(sql_create_soltech_table)
 
-connery = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
-cur.executemany("INSERT INTO connery VALUES(?, ?, ?);", connery)
-conn.commit()
-miller = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
-cur.executemany("INSERT INTO miller VALUES(?, ?, ?);", miller)
-conn.commit()
-cobalt = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
-cur.executemany("INSERT INTO cobalt VALUES(?, ?, ?);", cobalt)
-conn.commit()
-emerald = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
-cur.executemany("INSERT INTO emerald VALUES(?, ?, ?);", emerald)
-conn.commit()
-jaeger = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
-cur.executemany("INSERT INTO jaeger VALUES(?, ?, ?);", jaeger)
-conn.commit()
-soltech = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
-cur.executemany("INSERT INTO soltech VALUES(?, ?, ?);", soltech)
-conn.commit()
-
-print('\nOriginal Table:')
-original = conn.execute("SELECT * FROM emerald")
-for row in original:
-    print(row)
-
-# Configure logging
-class CustomFormatter(logging.Formatter): # Formatter
-
-    grey = "\x1b[38;20m"
-    yellow = "\x1b[33;20m"
-    red = "\x1b[31;20m"
-    bold_red = "\x1b[31;1m"
-    reset = "\x1b[0m"
-    format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
-
-    FORMATS = {
-        logging.DEBUG: grey + format + reset,
-        logging.INFO: grey + format + reset,
-        logging.WARNING: yellow + format + reset,
-        logging.ERROR: red + format + reset,
-        logging.CRITICAL: bold_red + format + reset
-    }
-
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        dt_fmt = '%m/%d/%Y %I:%M:%S'
-        formatter = logging.Formatter(log_fmt, dt_fmt)
-        return formatter.format(record)
-
-# Create logger
-logger = logging.getLogger('census')
-logger.setLevel(logging.INFO)
-
-handler = logging.StreamHandler()
-handler.setFormatter(CustomFormatter())
-logger.addHandler(handler)
+try:
+    connery = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
+    cur.executemany("INSERT INTO connery VALUES(?, ?, ?);", connery)
+    conn.commit()
+    miller = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
+    cur.executemany("INSERT INTO miller VALUES(?, ?, ?);", miller)
+    conn.commit()
+    cobalt = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
+    cur.executemany("INSERT INTO cobalt VALUES(?, ?, ?);", cobalt)
+    conn.commit()
+    emerald = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
+    cur.executemany("INSERT INTO emerald VALUES(?, ?, ?);", emerald)
+    conn.commit()
+    jaeger = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
+    cur.executemany("INSERT INTO jaeger VALUES(?, ?, ?);", jaeger)
+    conn.commit()
+    soltech = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
+    cur.executemany("INSERT INTO soltech VALUES(?, ?, ?);", soltech)
+    conn.commit()
+except Error as error:
+    log.debug(f"sqlite3: {error}") 
 
 # Server IDs
-world_ids = {
-    'Connery': 1,
-    'Miller': 10,
-    'Cobalt': 13,
-    'Emerald': 17,
-    'Jaeger': 19,
-    'SolTech': 40
+WORLD_IDS = {
+    'connery': 1,
+    'miller': 10,
+    'cobalt': 13,
+    'emerald': 17,
+    'jaeger': 19,
+    'soltech': 40
 }
 
 # A mapping of zone IDs to the region IDs of their warpgates
@@ -227,8 +240,8 @@ async def _get_open_zones(client: auraxium.Client, world_id: int) -> List[int]:
 
 async def main():
     async with auraxium.Client(service_id=API_KEY) as client:
-        for i in world_ids: # Servers (named)
-            server_id = world_ids[i] # Save server id
+        for i in WORLD_IDS: # Server names
+            server_id = WORLD_IDS[i] # Save server id
             open_continents = await _get_open_zones(client, server_id) # Get open continents of server_id
             # List open continents with names
             named_open_continents = []
@@ -245,35 +258,55 @@ async def main():
             for s in named_open_continents:
                 if s in continent_status:
                     continent_status[s] = 'open'
-            if i == 'Connery':
-                connery = [('1', continent_status['Amerish']), ('2', continent_status['Esamir']), ('3', continent_status['Hossin']), ('4', continent_status['Indar']), ('5', continent_status['Oshur'])]
-                cur.executemany("UPDATE connery SET status = ? WHERE id = ?;", connery)
-                conn.commit()
-            elif i == 'Miller':
-                miller = [('1', continent_status['Amerish']), ('2', continent_status['Esamir']), ('3', continent_status['Hossin']), ('4', continent_status['Indar']), ('5', continent_status['Oshur'])]
-                cur.executemany("UPDATE miller SET status = ? WHERE id = ?;", miller)
-                conn.commit()
-            elif i == 'Cobalt':
-                cobalt = [('1', continent_status['Amerish']), ('2', continent_status['Esamir']), ('3', continent_status['Hossin']), ('4', continent_status['Indar']), ('5', continent_status['Oshur'])]
-                cur.executemany("UPDATE cobalt SET status = ? WHERE id = ?;", cobalt)
-                conn.commit()
-            elif i == 'Emerald':
-                emerald = [('1', 'test'), ('2', continent_status['Esamir']), ('3', continent_status['Hossin']), ('4', continent_status['Indar']), ('5', continent_status['Oshur'])]
-                cur.executemany("UPDATE emerald SET status = ? WHERE id = ?;", emerald)
-                conn.commit()
-            elif i == 'Jaeger':
-                jaeger = [('1', continent_status['Amerish']), ('2', continent_status['Esamir']), ('3', continent_status['Hossin']), ('4', continent_status['Indar']), ('5', continent_status['Oshur'])]
-                cur.executemany("UPDATE jaeger SET status = ? WHERE id = ?;", jaeger)
-                conn.commit()
-            elif i == 'SolTech':
-                soltech = [('1', continent_status['Amerish']), ('2', continent_status['Esamir']), ('3', continent_status['Hossin']), ('4', continent_status['Indar']), ('5', continent_status['Oshur'])]
-                cur.executemany("UPDATE soltech SET status = ? WHERE id = ?;", soltech)
-                conn.commit()
             
-             #continent_status['Amerish']
+            try:
+                server_table = [(continent_status['Amerish'], '1'), (continent_status['Esamir'], '2'), (continent_status['Hossin'], '3'), (continent_status['Indar'], '4'), (continent_status['Oshur'], '5')]
+                cur.executemany(f"UPDATE {i} SET status = ? WHERE id = ?;", server_table)
+                conn.commit()
+            except Error as error:
+                log.error(error)
+                conn.rollback()
+
+            
+            # if i == 'Connery':
+            #     connery = [(continent_status['Amerish'], '1'), (continent_status['Esamir'], '2'), (continent_status['Hossin'], '3'), (continent_status['Indar'], '4'), (continent_status['Oshur'], '5')]
+            #     cur.executemany("UPDATE connery SET status = ? WHERE id = ?;", connery)
+            #     conn.commit()
+            # elif i == 'Miller':
+            #     miller = [(continent_status['Amerish'], '1'), (continent_status['Esamir'], '2'), (continent_status['Hossin'], '3'), (continent_status['Indar'], '4'), (continent_status['Oshur'], '5')]
+            #     cur.executemany("UPDATE miller SET status = ? WHERE id = ?;", miller)
+            #     conn.commit()
+            # elif i == 'Cobalt':
+            #     cobalt = [(continent_status['Amerish'], '1'), (continent_status['Esamir'], '2'), (continent_status['Hossin'], '3'), (continent_status['Indar'], '4'), (continent_status['Oshur'], '5')]
+            #     cur.executemany("UPDATE cobalt SET status = ? WHERE id = ?;", cobalt)
+            #     conn.commit()
+            # elif i == 'Emerald':
+            #     emerald = [(continent_status['Amerish'], '1'), (continent_status['Esamir'], '2'), (continent_status['Hossin'], '3'), (continent_status['Indar'], '4'), (continent_status['Oshur'], '5')]
+            #     cur.executemany("UPDATE emerald SET status = ? WHERE id = ?;", emerald)
+            #     conn.commit()
+            # elif i == 'Jaeger':
+            #     jaeger = [(continent_status['Amerish'], '1'), (continent_status['Esamir'], '2'), (continent_status['Hossin'], '3'), (continent_status['Indar'], '4'), (continent_status['Oshur'], '5')]
+            #     cur.executemany("UPDATE jaeger SET status = ? WHERE id = ?;", jaeger)
+            #     conn.commit()
+            # elif i == 'SolTech':
+            #     soltech = [(continent_status['Amerish'], '1'), (continent_status['Esamir'], '2'), (continent_status['Hossin'], '3'), (continent_status['Indar'], '4'), (continent_status['Oshur'], '5')]
+            #     cur.executemany("UPDATE soltech SET status = ? WHERE id = ?;", soltech)
+            #     conn.commit()
+            
+log.info("Fetching data...")
+t = time.perf_counter()
 asyncio.get_event_loop().run_until_complete(main()) 
-print('\nNew Table:')
-new = conn.execute("SELECT * FROM emerald")
-for row in new:
-    print(row)
+elapsed = time.perf_counter() - t
+log.info(f"Fetch completed in {round(elapsed, 2)}s")
 conn.close()
+
+# def loop(keep_looping: bool):
+#     while keep_looping == True:
+#         log.info("Fetching data...")
+#         t = time.perf_counter()
+#         asyncio.get_event_loop().run_until_complete(main()) 
+#         elapsed = time.perf_counter() - t
+#         log.info(f"Fetch completed in {round(elapsed, 2)}s")
+#         time.wait(300)
+#     else:
+#         conn.close()

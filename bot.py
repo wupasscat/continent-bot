@@ -19,19 +19,28 @@ def is_docker():
         os.path.exists('/.dockerenv') or
         os.path.isfile(path) and any('docker' in line for line in open(path))
     )
+docker = is_docker()
 # Change secrets variables accordingly
-if is_docker() == True: # Use Docker ENV variables
+if docker == True: # Use Docker ENV variables
     TOKEN = os.environ['DISCORD_TOKEN']
-    API_KEY = os.environ['CENSUS_API_KEY']
+    LOG_LEVEL = os.environ['LOG_LEVEL']
+
 else: # Use .env file for secrets
     load_dotenv()
     TOKEN = os.getenv('DISCORD_TOKEN')
-    API_KEY = os.getenv('API_KEY')
+    LOG_LEVEL = os.getenv('LOG_LEVEL')
+
+DEBUG = logging.DEBUG
+INFO = logging.INFO
+WARNING = logging.WARNING
+ERROR = logging.ERROR
+CRITICAL = logging.CRITICAL
 
 # Configure logging
 class CustomFormatter(logging.Formatter): # Formatter
 
     grey = "\x1b[38;20m"
+    blue = "\x1b[34m"
     yellow = "\x1b[33;20m"
     red = "\x1b[31;20m"
     bold_red = "\x1b[31;1m"
@@ -40,7 +49,7 @@ class CustomFormatter(logging.Formatter): # Formatter
 
     FORMATS = {
         logging.DEBUG: grey + format + reset,
-        logging.INFO: grey + format + reset,
+        logging.INFO: blue + format + reset,
         logging.WARNING: yellow + format + reset,
         logging.ERROR: red + format + reset,
         logging.CRITICAL: bold_red + format + reset
@@ -54,12 +63,15 @@ class CustomFormatter(logging.Formatter): # Formatter
 
 # Create logger
 logging.getLogger('discord.http').setLevel(logging.INFO)
-logger = logging.getLogger('discord')
-logger.setLevel(logging.INFO)
+log = logging.getLogger('discord')
+if LOG_LEVEL is None:
+    log.setLevel(logging.INFO)
+else:
+    log.setLevel(LOG_LEVEL)
 
 handler = logging.StreamHandler()
 handler.setFormatter(CustomFormatter())
-logger.addHandler(handler)
+log.addHandler(handler)
 # Disable VoiceClient warnings
 discord.VoiceClient.warn_nacl = False
 
@@ -81,11 +93,11 @@ class Buttons(discord.ui.View):
 # /continents
 @tree.command(name = "continents", description = "See open continents on a server")
 async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt', 'Emerald', 'Jaeger', 'SolTech']):
-    logger.info(f"Command /continents triggered for server {server}!")
+    log.info(f"Command /continents triggered for server {server}!")
     t = time.perf_counter()
     continent_status = await main(server) # get open continents from auraxium and send user selected server to main()
     elapsed = time.perf_counter() - t
-    logger.info(f"Response took {round(elapsed, 2)}s")
+    log.info(f"Response took {round(elapsed, 2)}s")
     # Embed
     embedVar = discord.Embed(
     title=server, description=f"Continents open: {continent_status['num_open']}", color=0x5865F2, timestamp=discord.utils.utcnow())
@@ -101,6 +113,6 @@ async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt',
 @client.event
 async def on_ready():
     await tree.sync()
-    logger.info('Bot has logged in as {0.user}'.format(client))
+    log.info('Bot has logged in as {0.user}'.format(client))
 
 client.run(TOKEN, log_handler=None)
