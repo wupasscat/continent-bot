@@ -8,8 +8,9 @@ from sqlite3 import Error
 from typing import Any, Dict, Iterator, List, Optional, Tuple, cast
 import auraxium
 from dotenv import load_dotenv
+from contextlib import suppress
 
-# Check if bot.py is in a container
+# Check if census_client.py is in a container
 def is_docker():
     path = '/proc/self/cgroup'
     return (
@@ -77,34 +78,40 @@ conn = sqlite3.connect('continents.db')
 sql_create_connery_table = """ CREATE TABLE IF NOT EXISTS connery (
                                     id integer PRIMARY KEY,
                                     continent text,
-                                    status text
+                                    status text,
+                                    time float
                                 ); """
 sql_create_miller_table = """ CREATE TABLE IF NOT EXISTS miller (
                                     id integer PRIMARY KEY,
                                     continent text,
-                                    status text
+                                    status text,
+                                    time float
                                 ); """
 
 sql_create_cobalt_table = """ CREATE TABLE IF NOT EXISTS cobalt (
                                     id integer PRIMARY KEY,
                                     continent text,
-                                    status text
+                                    status text,
+                                    time float
                                 ); """
 sql_create_emerald_table = """ CREATE TABLE IF NOT EXISTS emerald (
                                     id integer PRIMARY KEY,
                                     continent text,
-                                    status text
+                                    status text,
+                                    time float
                                 ); """
 sql_create_jaeger_table = """ CREATE TABLE IF NOT EXISTS jaeger (
                                     id integer PRIMARY KEY,
                                     continent text,
-                                    status text
+                                    status text,
+                                    time float
                                 ); """
 
 sql_create_soltech_table = """ CREATE TABLE IF NOT EXISTS soltech (
                                     id integer PRIMARY KEY,
                                     continent text,
-                                    status text
+                                    status text,
+                                    time float
                                 ); """
 
 cur = conn.cursor()
@@ -116,24 +123,27 @@ cur.execute(sql_create_emerald_table)
 cur.execute(sql_create_jaeger_table)
 cur.execute(sql_create_soltech_table)
 
+timestamp = time.time()
+print(f"First timestamp: {timestamp}")
+
 try:
-    connery = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
-    cur.executemany("INSERT INTO connery VALUES(?, ?, ?);", connery)
+    connery = [('1', 'amerish', 'closed', timestamp), ('2', 'esamir', 'closed', timestamp), ('3', 'hossin', 'closed', timestamp), ('4', 'indar', 'closed', timestamp), ('5', 'oshur', 'closed', timestamp)]
+    cur.executemany("INSERT INTO connery VALUES(?, ?, ?, ?);", connery)
     conn.commit()
-    miller = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
-    cur.executemany("INSERT INTO miller VALUES(?, ?, ?);", miller)
+    miller = [('1', 'amerish', 'closed', timestamp), ('2', 'esamir', 'closed', timestamp), ('3', 'hossin', 'closed', timestamp), ('4', 'indar', 'closed', timestamp), ('5', 'oshur', 'closed', timestamp)]
+    cur.executemany("INSERT INTO miller VALUES(?, ?, ?, ?);", miller)
     conn.commit()
-    cobalt = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
-    cur.executemany("INSERT INTO cobalt VALUES(?, ?, ?);", cobalt)
+    cobalt = [('1', 'amerish', 'closed', timestamp), ('2', 'esamir', 'closed', timestamp), ('3', 'hossin', 'closed', timestamp), ('4', 'indar', 'closed', timestamp), ('5', 'oshur', 'closed', timestamp)]
+    cur.executemany("INSERT INTO cobalt VALUES(?, ?, ?, ?);", cobalt)
     conn.commit()
-    emerald = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
-    cur.executemany("INSERT INTO emerald VALUES(?, ?, ?);", emerald)
+    emerald = [('1', 'amerish', 'closed', timestamp), ('2', 'esamir', 'closed', timestamp), ('3', 'hossin', 'closed', timestamp), ('4', 'indar', 'closed', timestamp), ('5', 'oshur', 'closed', timestamp)]
+    cur.executemany("INSERT INTO emerald VALUES(?, ?, ?, ?);", emerald)
     conn.commit()
-    jaeger = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
-    cur.executemany("INSERT INTO jaeger VALUES(?, ?, ?);", jaeger)
+    jaeger = [('1', 'amerish', 'closed', timestamp), ('2', 'esamir', 'closed', timestamp), ('3', 'hossin', 'closed', timestamp), ('4', 'indar', 'closed', timestamp), ('5', 'oshur', 'closed', timestamp)]
+    cur.executemany("INSERT INTO jaeger VALUES(?, ?, ?, ?);", jaeger)
     conn.commit()
-    soltech = [('1', 'amerish', 'closed'), ('2', 'esamir', 'closed'), ('3', 'hossin', 'closed'), ('4', 'indar', 'closed'), ('5', 'oshur', 'closed')]
-    cur.executemany("INSERT INTO soltech VALUES(?, ?, ?);", soltech)
+    soltech = [('1', 'amerish', 'closed', timestamp), ('2', 'esamir', 'closed', timestamp), ('3', 'hossin', 'closed', timestamp), ('4', 'indar', 'closed', timestamp), ('5', 'oshur', 'closed', timestamp)]
+    cur.executemany("INSERT INTO soltech VALUES(?, ?, ?, ?);", soltech)
     conn.commit()
 except Error as error:
     log.debug(f"sqlite3: {error}") 
@@ -258,40 +268,14 @@ async def main():
             for s in named_open_continents:
                 if s in continent_status:
                     continent_status[s] = 'open'
-            
             try:
-                server_table = [(continent_status['Amerish'], '1'), (continent_status['Esamir'], '2'), (continent_status['Hossin'], '3'), (continent_status['Indar'], '4'), (continent_status['Oshur'], '5')]
-                cur.executemany(f"UPDATE {i} SET status = ? WHERE id = ?;", server_table)
+                timestamp = time.time()
+                server_table = [(continent_status['Amerish'], timestamp, '1'), (continent_status['Esamir'], timestamp, '2'), (continent_status['Hossin'], timestamp, '3'), (continent_status['Indar'], timestamp, '4'), (continent_status['Oshur'], timestamp, '5')]
+                cur.executemany(f"UPDATE {i} SET status = ?, time = ? WHERE id = ?;", server_table)
                 conn.commit()
             except Error as error:
                 log.error(error)
                 conn.rollback()
-
-            
-            # if i == 'Connery':
-            #     connery = [(continent_status['Amerish'], '1'), (continent_status['Esamir'], '2'), (continent_status['Hossin'], '3'), (continent_status['Indar'], '4'), (continent_status['Oshur'], '5')]
-            #     cur.executemany("UPDATE connery SET status = ? WHERE id = ?;", connery)
-            #     conn.commit()
-            # elif i == 'Miller':
-            #     miller = [(continent_status['Amerish'], '1'), (continent_status['Esamir'], '2'), (continent_status['Hossin'], '3'), (continent_status['Indar'], '4'), (continent_status['Oshur'], '5')]
-            #     cur.executemany("UPDATE miller SET status = ? WHERE id = ?;", miller)
-            #     conn.commit()
-            # elif i == 'Cobalt':
-            #     cobalt = [(continent_status['Amerish'], '1'), (continent_status['Esamir'], '2'), (continent_status['Hossin'], '3'), (continent_status['Indar'], '4'), (continent_status['Oshur'], '5')]
-            #     cur.executemany("UPDATE cobalt SET status = ? WHERE id = ?;", cobalt)
-            #     conn.commit()
-            # elif i == 'Emerald':
-            #     emerald = [(continent_status['Amerish'], '1'), (continent_status['Esamir'], '2'), (continent_status['Hossin'], '3'), (continent_status['Indar'], '4'), (continent_status['Oshur'], '5')]
-            #     cur.executemany("UPDATE emerald SET status = ? WHERE id = ?;", emerald)
-            #     conn.commit()
-            # elif i == 'Jaeger':
-            #     jaeger = [(continent_status['Amerish'], '1'), (continent_status['Esamir'], '2'), (continent_status['Hossin'], '3'), (continent_status['Indar'], '4'), (continent_status['Oshur'], '5')]
-            #     cur.executemany("UPDATE jaeger SET status = ? WHERE id = ?;", jaeger)
-            #     conn.commit()
-            # elif i == 'SolTech':
-            #     soltech = [(continent_status['Amerish'], '1'), (continent_status['Esamir'], '2'), (continent_status['Hossin'], '3'), (continent_status['Indar'], '4'), (continent_status['Oshur'], '5')]
-            #     cur.executemany("UPDATE soltech SET status = ? WHERE id = ?;", soltech)
-            #     conn.commit()
             
 log.info("Fetching data...")
 t = time.perf_counter()
@@ -307,6 +291,27 @@ conn.close()
 #         asyncio.get_event_loop().run_until_complete(main()) 
 #         elapsed = time.perf_counter() - t
 #         log.info(f"Fetch completed in {round(elapsed, 2)}s")
-#         time.wait(300)
+#         time.sleep(60)
 #     else:
+#         log.info("Loop stopped")
 #         conn.close()
+
+# loop(True)
+# async def looper():
+#     log.info("Fetching data...")
+#     t = time.perf_counter()
+#     task = asyncio.Task(main())
+#     elapsed = time.perf_counter() - t
+#     log.info(f"Fetch completed in {round(elapsed, 2)}s")
+#     await asyncio.sleep(20)
+#     task.cancel()
+#     with suppress(asyncio.CancelledError):
+#         await task
+
+# loop = asyncio.new_event_loop()
+# asyncio.set_event_loop(loop)
+# try:
+#     loop.run_until_complete(looper())
+# finally:
+#     loop.run_until_complete(loop.shutdown_asyncgens())
+#     loop.close()

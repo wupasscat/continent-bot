@@ -1,16 +1,13 @@
 import os
-from multiprocessing import managers
-from typing_extensions import Self
 import discord
 import logging
 import logging.handlers
 from discord import app_commands
-from discord import ui
-import asyncio
-from typing import Any, Dict, Iterator, List, Optional, Tuple, cast, Literal
+from typing import Literal
 from dotenv import load_dotenv
 import time
-from census_client import main
+import aiosqlite
+# from census_client import main
 
 # Check if bot.py is in a container
 def is_docker():
@@ -75,40 +72,65 @@ log.addHandler(handler)
 # Disable VoiceClient warnings
 discord.VoiceClient.warn_nacl = False
 
+# Setup sqlite
+db_exists = os.path.exists('continents.db')
+if db_exists == True:
+    pass
+else:
+    log.exception("Database does not exist!")
+# conn = sqlite3.connect('continents.db')
+# cur = conn.cursor()
+
 # Setup Discord
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
-# Discord bot stuff
+# Collect data from db and create embed
+async def get_from_db(server: str):
+    db = await aiosqlite.connect('continents.db')
+    sql = f"""
+    SELECT * FROM {server}
+    """
+    async with db.execute(sql) as cursor: # Execute query
+        embedVar = discord.Embed(title=server[0].upper() + server[1:], color=0x5865F2, timestamp=discord.utils.utcnow()) # Create embed title
+        row_timestamps = []
+        async for row in cursor:
+            cont = row[1] # Row 1 is continents
+            cont = cont[0].upper() + cont[1:] # Captialize
+            status_emoji = {
+                'open': '🟢 Open  ',
+                'closed': '🔴 Closed'
+            }
+            status = status_emoji[row[2]] # Format status
+            embedVar.add_field(name=cont, value=status, inline=True) # Create embed fields
+            row_timestamps.append(row[3]) # Record timestamps
+        embedVar.add_field(name="\u200B", value="\u200B", inline=True) # Blank field to fill 3x3 space
+        data_age = round(time.time() - max(row_timestamps))
+        embedVar.set_footer(text=f"Data from {data_age}s ago", icon_url="https://raw.githubusercontent.com/wupasscat/wupasscat/main/profile.png")
+    await db.close()
+    return embedVar
 
-class Buttons(discord.ui.View):
-    def __init__(self, *, timeout=180):
-        super().__init__(timeout=timeout)
-    @discord.ui.button(label="Button",style=discord.ButtonStyle.primary)
-    async def blurple_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+# Discord
+# Refresh button
+class MyView(discord.ui.View):
+    def __init__(self, server):
+        super().__init__(timeout=None)
+        self.server = server
+    @discord.ui.button(label="Refresh",style=discord.ButtonStyle.primary, emoji="🔄")
+    async def refresh_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        log.info(f"Refresh /continents triggered for server {self.server[0].upper() + self.server[1:]}")
+        embedVar = await get_from_db(self.server)
         button.style=discord.ButtonStyle.success
-        await interaction.response.edit_message(content=f"This is an edited button response!", view=self)
+        await interaction.response.edit_message(embed=embedVar, view=self)
 
 # /continents
 @tree.command(name = "continents", description = "See open continents on a server")
-async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt', 'Emerald', 'Jaeger', 'SolTech']):
+async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt', 'Emerald', 'Jaeger', 'Soltech']):
     log.info(f"Command /continents triggered for server {server}!")
-    t = time.perf_counter()
-    continent_status = await main(server) # get open continents from auraxium and send user selected server to main()
-    elapsed = time.perf_counter() - t
-    log.info(f"Response took {round(elapsed, 2)}s")
-    # Embed
-    embedVar = discord.Embed(
-    title=server, description=f"Continents open: {continent_status['num_open']}", color=0x5865F2, timestamp=discord.utils.utcnow())
-    embedVar.add_field(name="Amerish", value=continent_status["Amerish"], inline=True)
-    embedVar.add_field(name="Esamir", value=continent_status["Esamir"], inline=True)
-    embedVar.add_field(name="Hossin", value=continent_status["Hossin"], inline=True)
-    embedVar.add_field(name="Indar", value=continent_status["Indar"], inline=True)
-    embedVar.add_field(name="Oshur", value=continent_status["Oshur"], inline=True)
-    embedVar.add_field(name="\u200B", value="\u200B", inline=True)
-    embedVar.set_footer(text=f"Completed in {round(elapsed, 2)}s", icon_url="https://raw.githubusercontent.com/wupasscat/wupasscat/main/profile.png")
-    await interaction.response.send_message(embed=embedVar, view=Buttons())
+    server = server[0].lower() + server[1:]
+    embedVar = await get_from_db(server)
+    await interaction.response.send_message(embed=embedVar, view=MyView(server))
 
 @client.event
 async def on_ready():
