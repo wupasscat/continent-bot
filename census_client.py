@@ -9,6 +9,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, cast
 import auraxium
 from dotenv import load_dotenv
 from contextlib import suppress
+import aiosqlite
 
 # Check if census_client.py is in a container
 def is_docker():
@@ -276,7 +277,34 @@ async def main():
             except Error as error:
                 log.error(error)
                 conn.rollback()
-            
+
+async def db_setup(future: asyncio.Future):
+    async with aiosqlite.connect('continents.db') as db:
+        await db.executemany(
+            sql_create_connery_table, 
+            sql_create_miller_table, 
+            sql_create_cobalt_table,
+            sql_create_emerald_table,
+            sql_create_jaeger_table,
+            sql_create_soltech_table
+            )
+        timestamp = time.time()
+        rows = [
+            ('1', 'amerish', 'closed', timestamp), 
+            ('2', 'esamir', 'closed', timestamp), 
+            ('3', 'hossin', 'closed', timestamp), 
+            ('4', 'indar', 'closed', timestamp), 
+            ('5', 'oshur', 'closed', timestamp)
+            ]
+        async for world in WORLD_IDS:
+            await db.executemany(f"INSERT INTO {world} VALUES(?, ?, ?, ?);", rows)
+        await db.commit()
+        exc = future.exception()
+        if exc:
+            log.warning(str(exc))
+
+
+
 log.info("Fetching data...")
 t = time.perf_counter()
 asyncio.get_event_loop().run_until_complete(main()) 
