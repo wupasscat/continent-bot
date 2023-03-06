@@ -3,12 +3,12 @@ import logging
 import logging.handlers
 import os
 import time
-from contextlib import suppress
 from typing import Any, Dict, Iterator, List, Optional, Tuple, cast
 
 import aiosqlite
 import auraxium
 from dotenv import load_dotenv
+
 
 # Check if census_client.py is in a container
 def is_docker():
@@ -239,75 +239,49 @@ async def db_setup():
                 log.error(error)
 
 async def main():
-    async with auraxium.Client(service_id=API_KEY) as client:
-        for i in WORLD_IDS: # Server names
-            server_id = WORLD_IDS[i] # Save server id
-            open_continents = await _get_open_zones(client, server_id) # Get open continents of server_id
-            # List open continents with names
-            named_open_continents = []
-            for s in open_continents:
-                named_open_continents.append(_ZONE_NAMES[s])
-            
-            continent_status = {
-                'Amerish': 'closed',
-                'Esamir': 'closed',
-                'Hossin': 'closed',
-                'Indar': 'closed',
-                'Oshur': 'closed'
-            }
-            for s in named_open_continents:
-                if s in continent_status:
-                    continent_status[s] = 'open'
-            await db_setup()
-            db = await aiosqlite.connect('continents.db')
-            timestamp = time.time()
-            server_table = [
-            (continent_status['Amerish'], timestamp, '1'), 
-            (continent_status['Esamir'], timestamp, '2'), 
-            (continent_status['Hossin'], timestamp, '3'), 
-            (continent_status['Indar'], timestamp, '4'), 
-            (continent_status['Oshur'], timestamp, '5')
-            ]
-            await db.executemany(f"UPDATE {i} SET status = ?, time = ? WHERE id = ?;", server_table)
-            log.info(f"Updating {i}")
-            await db.commit()
-            await db.close()
-        
+    await db_setup()
+    while True:
+        async with auraxium.Client(service_id=API_KEY) as client:
+            log.info("Querying API...")
+            t = time.perf_counter()
+            for i in WORLD_IDS: # Server names
+                server_id = WORLD_IDS[i] # Save server id
+                open_continents = await _get_open_zones(client, server_id) # Get open continents of server_id
+                # List open continents with names
+                named_open_continents = []
+                for s in open_continents:
+                    named_open_continents.append(_ZONE_NAMES[s])
+                
+                continent_status = {
+                    'Amerish': 'closed',
+                    'Esamir': 'closed',
+                    'Hossin': 'closed',
+                    'Indar': 'closed',
+                    'Oshur': 'closed'
+                }
+                for s in named_open_continents:
+                    if s in continent_status:
+                        continent_status[s] = 'open'
+                db = await aiosqlite.connect('continents.db')
+                timestamp = time.time()
+                server_table = [
+                (continent_status['Amerish'], timestamp, '1'), 
+                (continent_status['Esamir'], timestamp, '2'), 
+                (continent_status['Hossin'], timestamp, '3'), 
+                (continent_status['Indar'], timestamp, '4'), 
+                (continent_status['Oshur'], timestamp, '5')
+                ]
+                await db.executemany(f"UPDATE {i} SET status = ?, time = ? WHERE id = ?;", server_table)
+                log.debug(f"Updating {i}")
+                await db.commit()
+                await db.close()
+            elapsed = time.perf_counter() - t
+            log.info(f"Query completed in {round(elapsed, 2)}s")
+            sleep_time = 60
+            log.info(f"Sleeping for {sleep_time}s...")
+            await asyncio.sleep(sleep_time)
 
-log.info("Fetching data...")
-t = time.perf_counter()
-asyncio.get_event_loop().run_until_complete(main()) 
-elapsed = time.perf_counter() - t
-log.info(f"Fetch completed in {round(elapsed, 2)}s")
-
-# def loop(keep_looping: bool):
-#     while keep_looping == True:
-#         log.info("Fetching data...")
-#         t = time.perf_counter()
-#         asyncio.get_event_loop().run_until_complete(main()) 
-#         elapsed = time.perf_counter() - t
-#         log.info(f"Fetch completed in {round(elapsed, 2)}s")
-#         time.sleep(60)
-#     else:
-#         log.info("Loop stopped")
-#         conn.close()
-
-# loop(True)
-# async def looper():
-#     log.info("Fetching data...")
-#     t = time.perf_counter()
-#     task = asyncio.Task(main())
-#     elapsed = time.perf_counter() - t
-#     log.info(f"Fetch completed in {round(elapsed, 2)}s")
-#     await asyncio.sleep(20)
-#     task.cancel()
-#     with suppress(asyncio.CancelledError):
-#         await task
-
-# loop = asyncio.new_event_loop()
-# asyncio.set_event_loop(loop)
-# try:
-#     loop.run_until_complete(looper())
-# finally:
-#     loop.run_until_complete(loop.shutdown_asyncgens())
-#     loop.close()
+# if __name__ == '__main__':
+#     loop = asyncio.new_event_loop()
+#     loop.create_task(main())
+#     loop.run_forever()

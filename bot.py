@@ -9,7 +9,8 @@ import discord
 from discord import app_commands
 from dotenv import load_dotenv
 
-# from census_client import main
+from census_client import main
+
 
 # Check if bot.py is in a container
 def is_docker():
@@ -74,14 +75,10 @@ log.addHandler(handler)
 # Disable VoiceClient warnings
 discord.VoiceClient.warn_nacl = False
 
-# Setup sqlite
+# Check for continents.db
 db_exists = os.path.exists('continents.db')
-if db_exists == True:
-    pass
-else:
-    log.exception("Database does not exist!")
-# conn = sqlite3.connect('continents.db')
-# cur = conn.cursor()
+if db_exists == False:
+    log.error("Database does not exist!")
 
 # Setup Discord
 intents = discord.Intents.default()
@@ -121,7 +118,7 @@ class MyView(discord.ui.View):
         self.server = server
     @discord.ui.button(label="Refresh",style=discord.ButtonStyle.primary, emoji="🔄")
     async def refresh_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        log.info(f"Refresh /continents triggered for server {self.server[0].upper() + self.server[1:]}")
+        log.info(f"Refresh /continents triggered for {self.server[0].upper() + self.server[1:]}")
         embedVar = await get_from_db(self.server)
         button.style=discord.ButtonStyle.success
         await interaction.response.edit_message(embed=embedVar, view=self)
@@ -129,7 +126,7 @@ class MyView(discord.ui.View):
 # /continents
 @tree.command(name = "continents", description = "See open continents on a server")
 async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt', 'Emerald', 'Jaeger', 'Soltech']):
-    log.info(f"Command /continents triggered for server {server}!")
+    log.info(f"Command /continents triggered for {server}")
     server = server[0].lower() + server[1:]
     embedVar = await get_from_db(server)
     await interaction.response.send_message(embed=embedVar, view=MyView(server))
@@ -138,5 +135,6 @@ async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt',
 async def on_ready():
     await tree.sync()
     log.info('Bot has logged in as {0.user}'.format(client))
+    await main() # Run census_client.py
 
 client.run(TOKEN, log_handler=None)
