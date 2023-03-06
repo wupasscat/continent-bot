@@ -2,14 +2,13 @@ import asyncio
 import logging
 import logging.handlers
 import os
-import sqlite3
 import time
-from sqlite3 import Error
+from contextlib import suppress
 from typing import Any, Dict, Iterator, List, Optional, Tuple, cast
+
+import aiosqlite
 import auraxium
 from dotenv import load_dotenv
-from contextlib import suppress
-import aiosqlite
 
 # Check if census_client.py is in a container
 def is_docker():
@@ -74,8 +73,6 @@ log.addHandler(handler)
 fp = open('continents.db') # Create db file if it doesn't exist
 fp.close()
 
-conn = sqlite3.connect('continents.db')
-
 sql_create_connery_table = """ CREATE TABLE IF NOT EXISTS connery (
                                     id integer PRIMARY KEY,
                                     continent text,
@@ -113,41 +110,7 @@ sql_create_soltech_table = """ CREATE TABLE IF NOT EXISTS soltech (
                                     continent text,
                                     status text,
                                     time float
-                                ); """
-
-cur = conn.cursor()
-
-cur.execute(sql_create_connery_table)
-cur.execute(sql_create_miller_table)
-cur.execute(sql_create_cobalt_table)
-cur.execute(sql_create_emerald_table)
-cur.execute(sql_create_jaeger_table)
-cur.execute(sql_create_soltech_table)
-
-timestamp = time.time()
-print(f"First timestamp: {timestamp}")
-
-try:
-    connery = [('1', 'amerish', 'closed', timestamp), ('2', 'esamir', 'closed', timestamp), ('3', 'hossin', 'closed', timestamp), ('4', 'indar', 'closed', timestamp), ('5', 'oshur', 'closed', timestamp)]
-    cur.executemany("INSERT INTO connery VALUES(?, ?, ?, ?);", connery)
-    conn.commit()
-    miller = [('1', 'amerish', 'closed', timestamp), ('2', 'esamir', 'closed', timestamp), ('3', 'hossin', 'closed', timestamp), ('4', 'indar', 'closed', timestamp), ('5', 'oshur', 'closed', timestamp)]
-    cur.executemany("INSERT INTO miller VALUES(?, ?, ?, ?);", miller)
-    conn.commit()
-    cobalt = [('1', 'amerish', 'closed', timestamp), ('2', 'esamir', 'closed', timestamp), ('3', 'hossin', 'closed', timestamp), ('4', 'indar', 'closed', timestamp), ('5', 'oshur', 'closed', timestamp)]
-    cur.executemany("INSERT INTO cobalt VALUES(?, ?, ?, ?);", cobalt)
-    conn.commit()
-    emerald = [('1', 'amerish', 'closed', timestamp), ('2', 'esamir', 'closed', timestamp), ('3', 'hossin', 'closed', timestamp), ('4', 'indar', 'closed', timestamp), ('5', 'oshur', 'closed', timestamp)]
-    cur.executemany("INSERT INTO emerald VALUES(?, ?, ?, ?);", emerald)
-    conn.commit()
-    jaeger = [('1', 'amerish', 'closed', timestamp), ('2', 'esamir', 'closed', timestamp), ('3', 'hossin', 'closed', timestamp), ('4', 'indar', 'closed', timestamp), ('5', 'oshur', 'closed', timestamp)]
-    cur.executemany("INSERT INTO jaeger VALUES(?, ?, ?, ?);", jaeger)
-    conn.commit()
-    soltech = [('1', 'amerish', 'closed', timestamp), ('2', 'esamir', 'closed', timestamp), ('3', 'hossin', 'closed', timestamp), ('4', 'indar', 'closed', timestamp), ('5', 'oshur', 'closed', timestamp)]
-    cur.executemany("INSERT INTO soltech VALUES(?, ?, ?, ?);", soltech)
-    conn.commit()
-except Error as error:
-    log.debug(f"sqlite3: {error}") 
+                                ); """ 
 
 # Server IDs
 WORLD_IDS = {
@@ -249,6 +212,32 @@ async def _get_open_zones(client: auraxium.Client, world_id: int) -> List[int]:
 
     return open_zones
 
+async def db_setup():
+    async with aiosqlite.connect('continents.db') as db:
+        await db.execute(sql_create_connery_table)
+        await db.execute(sql_create_miller_table)
+        await db.execute(sql_create_cobalt_table)
+        await db.execute(sql_create_emerald_table)
+        await db.execute(sql_create_jaeger_table)
+        await db.execute(sql_create_soltech_table)
+        timestamp = time.time()
+        rows = [
+            ('1', 'amerish', 'closed', timestamp), 
+            ('2', 'esamir', 'closed', timestamp), 
+            ('3', 'hossin', 'closed', timestamp), 
+            ('4', 'indar', 'closed', timestamp), 
+            ('5', 'oshur', 'closed', timestamp)
+            ]
+        try:
+            for world in WORLD_IDS:
+                await db.executemany(f"INSERT INTO {world} VALUES(?, ?, ?, ?);", rows)
+            await db.commit()
+        except aiosqlite.Error as error:
+            if type(error) == aiosqlite.IntegrityError:
+                log.debug(error)
+            else:
+                log.error(error)
+
 async def main():
     async with auraxium.Client(service_id=API_KEY) as client:
         for i in WORLD_IDS: # Server names
@@ -269,48 +258,27 @@ async def main():
             for s in named_open_continents:
                 if s in continent_status:
                     continent_status[s] = 'open'
-            try:
-                timestamp = time.time()
-                server_table = [(continent_status['Amerish'], timestamp, '1'), (continent_status['Esamir'], timestamp, '2'), (continent_status['Hossin'], timestamp, '3'), (continent_status['Indar'], timestamp, '4'), (continent_status['Oshur'], timestamp, '5')]
-                cur.executemany(f"UPDATE {i} SET status = ?, time = ? WHERE id = ?;", server_table)
-                conn.commit()
-            except Error as error:
-                log.error(error)
-                conn.rollback()
-
-async def db_setup(future: asyncio.Future):
-    async with aiosqlite.connect('continents.db') as db:
-        await db.executemany(
-            sql_create_connery_table, 
-            sql_create_miller_table, 
-            sql_create_cobalt_table,
-            sql_create_emerald_table,
-            sql_create_jaeger_table,
-            sql_create_soltech_table
-            )
-        timestamp = time.time()
-        rows = [
-            ('1', 'amerish', 'closed', timestamp), 
-            ('2', 'esamir', 'closed', timestamp), 
-            ('3', 'hossin', 'closed', timestamp), 
-            ('4', 'indar', 'closed', timestamp), 
-            ('5', 'oshur', 'closed', timestamp)
+            await db_setup()
+            db = await aiosqlite.connect('continents.db')
+            timestamp = time.time()
+            server_table = [
+            (continent_status['Amerish'], timestamp, '1'), 
+            (continent_status['Esamir'], timestamp, '2'), 
+            (continent_status['Hossin'], timestamp, '3'), 
+            (continent_status['Indar'], timestamp, '4'), 
+            (continent_status['Oshur'], timestamp, '5')
             ]
-        async for world in WORLD_IDS:
-            await db.executemany(f"INSERT INTO {world} VALUES(?, ?, ?, ?);", rows)
-        await db.commit()
-        exc = future.exception()
-        if exc:
-            log.warning(str(exc))
-
-
+            await db.executemany(f"UPDATE {i} SET status = ?, time = ? WHERE id = ?;", server_table)
+            log.info(f"Updating {i}")
+            await db.commit()
+            await db.close()
+        
 
 log.info("Fetching data...")
 t = time.perf_counter()
 asyncio.get_event_loop().run_until_complete(main()) 
 elapsed = time.perf_counter() - t
 log.info(f"Fetch completed in {round(elapsed, 2)}s")
-conn.close()
 
 # def loop(keep_looping: bool):
 #     while keep_looping == True:

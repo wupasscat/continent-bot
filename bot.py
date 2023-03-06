@@ -1,12 +1,14 @@
-import os
-import discord
 import logging
 import logging.handlers
-from discord import app_commands
-from typing import Literal
-from dotenv import load_dotenv
+import os
 import time
+from typing import Literal
+
 import aiosqlite
+import discord
+from discord import app_commands
+from dotenv import load_dotenv
+
 # from census_client import main
 
 # Check if bot.py is in a container
