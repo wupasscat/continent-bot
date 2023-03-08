@@ -1,14 +1,27 @@
-.. continent-bot documentation master file, created by
-   sphinx-quickstart on Wed Mar  8 14:33:53 2023.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. toctree::
+   :hidden:
 
-Welcome to continent-bot's documentation!
-=========================================
+   Documentation Home <self>
+
+A Discord bot written in Python for `PlanetSide 2 <https://www.planetside2.com/home>`_ that checks which continents are open on a server so you don't have to.
+
+`Release notes <https://github.com/wupasscat/continent-bot/releases>`_
+•
+`Issue tracker <https://github.com/wupasscat/continent-bot/issues>`_
+•
+`Repository <https://github.com/wupasscat/continent-bot>`_
+
+=====
+
+======================
+Documentation Contents
+======================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :caption: Basic Usage
+   :maxdepth: 1
+
+   usage/selfhosting
 
 
 
