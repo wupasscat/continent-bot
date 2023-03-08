@@ -26,7 +26,7 @@ docker run -d --name continent-bot \
 ### Environment Variables:
 - `DISCORD_TOKEN` found in the "Bot" section of your Discord application
 - `CENSUS_API_KEY` Daybreak Games Census API service ID  
-    ```{tip}
+    ```{warning}
     You can use the default value `s:example` for testing but you will be limited to 10 requests per minute.  
     It is recommended that you apply for a service ID [here](https://census.daybreakgames.com/#devSignup)
 
@@ -57,7 +57,7 @@ services:
 ### Environment Variables:
 - `DISCORD_TOKEN` found in the "Bot" section of your Discord application
 - `CENSUS_API_KEY` Daybreak Games Census API service ID  
-    ```{tip}
+    ```{warning}
     You can use the default value `s:example` for testing but you will be limited to 10 requests per minute.  
     It is recommended that you apply for a service ID [here](https://census.daybreakgames.com/#devSignup)
 
@@ -81,7 +81,7 @@ services:
 ### Environment Variables:
 - "Discord Bot Token" found in the "Bot" section of your Discord application
 - "PlanetSide 2 API service ID" Daybreak Games Census API service ID  
-    ```{tip}
+    ```{warning}
     You can use the default value `s:example` for testing but you will be limited to 10 requests per minute.  
     It is recommended that you apply for a service ID [here](https://census.daybreakgames.com/#devSignup)
 
@@ -129,7 +129,7 @@ services:
     ```
     - `DISCORD_TOKEN` found in the "Bot" section of your Discord application
     - `API_KEY` Daybreak Games Census API service ID  
-    ```{tip}
+    ```{warning}
     You can use the default value `s:example` for testing but you will be limited to 10 requests per minute.  
     It is recommended that you apply for a service ID [here](https://census.daybreakgames.com/#devSignup)
 
