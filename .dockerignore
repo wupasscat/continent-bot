@@ -28,6 +28,7 @@
 **/lib64
 **/.github
 **/assets
+**/docs
 LICENSE
 README.md
 pyvenv.cfg
