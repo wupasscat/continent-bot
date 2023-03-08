@@ -8,7 +8,7 @@ A Discord bot written in Python for [Planetside 2](https://www.planetside2.com/h
 1. **[Invite Bot](https://discord.com/oauth2/authorize?client_id=1080145429632663623&permissions=274877958208&scope=bot%20applications.commands)**  
 2. Summon the bot with `/continents` and input a server
 ## Self-Hosting
-[See wiki](https://github.com/wupasscat/continent-bot/wiki/Docker)
+[See docs](https://continent-bot.readthedocs.io/en/latest/)
 ***
 ## Contributing 
 File bug reports or suggest new features and changes by creating an [Issue](https://github.com/wupasscat/continent-bot/issues/)  
