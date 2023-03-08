@@ -18,7 +18,7 @@ Documentation Contents
 ======================
 
 .. toctree::
-   :caption: Basic Usage
+   :caption: Self-Hosting
    :maxdepth: 1
 
    usage/selfhosting
