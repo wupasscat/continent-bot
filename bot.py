@@ -120,7 +120,6 @@ class MyView(discord.ui.View):
     async def refresh_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         log.info(f"Refresh /continents triggered for {self.server[0].upper() + self.server[1:]}")
         embedVar = await get_from_db(self.server)
-        button.style=discord.ButtonStyle.success
         await interaction.response.edit_message(embed=embedVar, view=self)
 
 # /continents
