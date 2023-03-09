@@ -69,6 +69,11 @@ handler = logging.StreamHandler()
 handler.setFormatter(CustomFormatter())
 log.addHandler(handler)
 
+if LOG_LEVEL == 'DEBUG':
+    auraxium_log = logging.getLogger('auraxium')
+    auraxium_log.setLevel(logging.DEBUG)
+    auraxium_log.addHandler(handler)
+
 # Setup sqlite
 fp = open('continents.db') # Create db file if it doesn't exist
 fp.close()
@@ -272,9 +277,10 @@ async def main():
                 (continent_status['Oshur'], timestamp, '5')
                 ]
                 await db.executemany(f"UPDATE {i} SET status = ?, time = ? WHERE id = ?;", server_table)
-                log.debug(f"Updating {i}")
+                log.info(f"Updated {i}")
                 await db.commit()
                 await db.close()
+                await asyncio.sleep(6)
             elapsed = time.perf_counter() - t
             log.info(f"Query completed in {round(elapsed, 2)}s")
             sleep_time = 60
