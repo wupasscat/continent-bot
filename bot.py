@@ -107,6 +107,9 @@ async def get_from_db(server: str):
         embedVar.add_field(name="\u200B", value="\u200B", inline=True) # Blank field to fill 3x3 space
         data_age = round(time.time() - max(row_timestamps))
         embedVar.set_footer(text=f"Data from {data_age}s ago", icon_url="https://raw.githubusercontent.com/wupasscat/wupasscat/main/profile.png")
+        if data_age > 300:
+            log.warning("Data is older than 5 minutes! Retrying")
+            await main()
     await db.close()
     return embedVar
 
