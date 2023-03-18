@@ -20,12 +20,12 @@ def is_docker():
 docker = is_docker()
 # Change secrets variables accordingly
 if docker == True: # Use Docker ENV variables
-    API_KEY = os.environ['CENSUS_API_KEY']
-    LOG_LEVEL = os.environ['LOG_LEVEL']
+    API_KEY = os.getenv('CENSUS_API_KEY') or 's:example'
+    LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
 else: # Use .env file for secrets
     load_dotenv()
-    API_KEY = os.getenv('API_KEY')
-    LOG_LEVEL = os.getenv('LOG_LEVEL')
+    API_KEY = os.getenv('API_KEY') or 's:example'
+    LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
 
 DEBUG = logging.DEBUG
 INFO = logging.INFO
@@ -60,7 +60,7 @@ class CustomFormatter(logging.Formatter):
 
 # Create logger
 log = logging.getLogger('census')
-if LOG_LEVEL is None:
+if not LOG_LEVEL:
     log.setLevel(logging.INFO)
 else:
     log.setLevel(LOG_LEVEL)

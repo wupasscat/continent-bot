@@ -22,13 +22,13 @@ def is_docker():
 docker = is_docker()
 # Change secrets variables accordingly
 if docker == True: # Use Docker ENV variables
-    TOKEN = os.environ['DISCORD_TOKEN']
-    LOG_LEVEL = os.environ['LOG_LEVEL']
+    TOKEN = os.getenv('DISCORD_TOKEN')
+    LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
 
 else: # Use .env file for secrets
     load_dotenv()
     TOKEN = os.getenv('DISCORD_TOKEN')
-    LOG_LEVEL = os.getenv('LOG_LEVEL')
+    LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
 
 DEBUG = logging.DEBUG
 INFO = logging.INFO
@@ -64,7 +64,7 @@ class CustomFormatter(logging.Formatter): # Formatter
 # Create logger
 logging.getLogger('discord.http').setLevel(logging.INFO)
 log = logging.getLogger('discord')
-if LOG_LEVEL is None:
+if not LOG_LEVEL:
     log.setLevel(logging.INFO)
 else:
     log.setLevel(LOG_LEVEL)
