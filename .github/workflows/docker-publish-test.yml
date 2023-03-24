@@ -7,7 +7,7 @@
 # To get a newer version, you will need to update the SHA.
 # You can also reference a tag or branch, but the action may change without warning.
 
-name: Publish Docker image
+name: Publish Docker image (testing)
 
 on:
   release:
@@ -15,7 +15,7 @@ on:
 
 jobs:
   push_to_registries:
-    if: "!github.event.release.prerelease" # Don't run on pre-releases
+    if: "github.event.release.prerelease" # Only run on pre-releases
     name: Push Docker image to multiple registries
     runs-on: ubuntu-latest
     permissions:
@@ -46,7 +46,7 @@ jobs:
             wupasscat/continentbot
             ghcr.io/wupasscat/continentbot
           flavor: |
-            latest=auto
+            latest=false
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
