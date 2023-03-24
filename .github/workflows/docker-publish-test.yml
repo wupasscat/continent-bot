@@ -11,10 +11,11 @@ name: Publish Docker image (testing)
 
 on:
   release:
-    types: [prereleased]
+    types: [published]
 
 jobs:
   push_to_registries:
+    if: "github.event.release.prerelease" # Only run on pre-releases
     name: Push Docker image to multiple registries
     runs-on: ubuntu-latest
     permissions:
