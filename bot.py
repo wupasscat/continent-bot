@@ -95,7 +95,7 @@ async def get_from_db(server: str):
         embedVar = discord.Embed(title=server[0].upper() + server[1:], color=0x5865F2, timestamp=discord.utils.utcnow()) # Create embed title
         row_timestamps = []
         async for row in cursor:
-            cont = row[1] # Row 1 is continents
+            cont = row[1] # Column 1 is continents
             cont = cont[0].upper() + cont[1:] # Captialize
             status_emoji = {
                 'open': '🟢 Open  ',
@@ -106,7 +106,13 @@ async def get_from_db(server: str):
             row_timestamps.append(row[3]) # Record timestamps
         embedVar.add_field(name="\u200B", value="\u200B", inline=True) # Blank field to fill 3x3 space
         data_age = round(time.time() - max(row_timestamps))
-        embedVar.set_footer(text=f"Data from {data_age}s ago", icon_url="https://raw.githubusercontent.com/wupasscat/wupasscat/main/profile.png")
+        mm, ss = divmod(data_age, 60)
+        hh, mm = divmod(mm, 60)
+        if data_age > 600:
+            embedVar.set_footer(text=f"Data from {hh}h, {mm}m, {ss}s ago", icon_url="https://raw.githubusercontent.com/wupasscat/continent-bot/main/assets/exclamation-circle.png")
+        else:
+            embedVar.set_footer(text=f"All systems operational", icon_url="https://raw.githubusercontent.com/wupasscat/continent-bot/main/assets/check-circle.png")
+
     await db.close()
     return embedVar
 
