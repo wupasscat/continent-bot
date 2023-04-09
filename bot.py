@@ -134,6 +134,6 @@ async def continents(interaction, server: Literal['Connery', 'Miller', 'Cobalt',
 async def on_ready():
     await tree.sync()
     log.info('Bot has logged in as {0.user}'.format(client))
-    await main() # Run census_client.py
+    await main(True) # Run census_client.py
 
 client.run(TOKEN, log_handler=None)

@@ -249,7 +249,7 @@ async def db_setup():
             else:
                 log.error(error)
 
-async def main():
+async def main(loop: bool):
     await db_setup()
     while True:
         async with auraxium.Client(service_id=API_KEY) as client:
@@ -293,11 +293,13 @@ async def main():
                 await asyncio.sleep(6)
             elapsed = time.perf_counter() - t
             log.info(f"Query completed in {round(elapsed, 2)}s")
+            if loop == False:
+                break
             sleep_time = 60
             log.info(f"Sleeping for {sleep_time}s...")
             await asyncio.sleep(sleep_time)
 
-# if __name__ == '__main__':
-#     loop = asyncio.new_event_loop()
-#     loop.create_task(main())
-#     loop.run_forever()
+# For running census_client.py independently of bot.py for development
+if __name__ == '__main__':
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(main(True)) # True: main() runs forever, False: main() runs once
