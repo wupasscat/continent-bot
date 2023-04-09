@@ -29,6 +29,8 @@
 **/.github
 **/assets
 **/docs
-LICENSE
-README.md
-pyvenv.cfg
+**/tests
+**/LICENSE
+**/README.md
+**/pyvenv.cfg
+**/pytest.ini
