@@ -51,6 +51,7 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+junit/
 
 # Translations
 *.mo
@@ -135,5 +136,6 @@ dmypy.json
 # VSCode
 .vscode/
 
+.ruff_cache
 
 continents.db

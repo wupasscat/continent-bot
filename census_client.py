@@ -17,12 +17,14 @@ def is_docker():
         os.path.exists('/.dockerenv') or
         os.path.isfile(path) and any('docker' in line for line in open(path))
     )
+
+
 docker = is_docker()
 # Change secrets variables accordingly
-if docker == True: # Use Docker ENV variables
+if docker is True:  # Use Docker ENV variables
     API_KEY = os.getenv('CENSUS_API_KEY') or 's:example'
     LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
-else: # Use .env file for secrets
+else:  # Use .env file for secrets
     load_dotenv()
     API_KEY = os.getenv('API_KEY') or 's:example'
     LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
@@ -32,6 +34,7 @@ INFO = logging.INFO
 WARNING = logging.WARNING
 ERROR = logging.ERROR
 CRITICAL = logging.CRITICAL
+
 
 # Configure logging
 class CustomFormatter(logging.Formatter):
@@ -58,6 +61,7 @@ class CustomFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt, dt_fmt)
         return formatter.format(record)
 
+
 # Create logger
 log = logging.getLogger('census')
 if not LOG_LEVEL:
@@ -75,8 +79,6 @@ if LOG_LEVEL == 'DEBUG':
     auraxium_log.addHandler(handler)
 
 # Setup sqlite
-fp = open('continents.db') # Create db file if it doesn't exist
-fp.close()
 
 sql_create_connery_table = """ CREATE TABLE IF NOT EXISTS connery (
                                     id integer PRIMARY KEY,
@@ -115,7 +117,7 @@ sql_create_soltech_table = """ CREATE TABLE IF NOT EXISTS soltech (
                                     continent text,
                                     status text,
                                     time float
-                                ); """ 
+                                ); """
 
 # Server IDs
 WORLD_IDS = {
@@ -217,7 +219,16 @@ async def _get_open_zones(client: auraxium.Client, world_id: int) -> List[int]:
 
     return open_zones
 
+
 async def db_setup():
+    try:
+        f = open("continents.db", "x")
+        f.close
+    except FileExistsError:
+        log.info("Found existing database!")
+    else:
+        log.info("Database not found. Created a new one!")
+
     async with aiosqlite.connect('continents.db') as db:
         await db.execute(sql_create_connery_table)
         await db.execute(sql_create_miller_table)
@@ -227,10 +238,10 @@ async def db_setup():
         await db.execute(sql_create_soltech_table)
         timestamp = time.time()
         rows = [
-            ('1', 'amerish', 'closed', timestamp), 
-            ('2', 'esamir', 'closed', timestamp), 
-            ('3', 'hossin', 'closed', timestamp), 
-            ('4', 'indar', 'closed', timestamp), 
+            ('1', 'amerish', 'closed', timestamp),
+            ('2', 'esamir', 'closed', timestamp),
+            ('3', 'hossin', 'closed', timestamp),
+            ('4', 'indar', 'closed', timestamp),
             ('5', 'oshur', 'closed', timestamp)
             ]
         try:
@@ -243,24 +254,25 @@ async def db_setup():
             else:
                 log.error(error)
 
-async def main():
+
+async def main(loop: bool):
     await db_setup()
     while True:
         async with auraxium.Client(service_id=API_KEY) as client:
             log.info("Querying API...")
             t = time.perf_counter()
-            for i in WORLD_IDS: # Server names
-                server_id = WORLD_IDS[i] # Save server id
+            for i in WORLD_IDS:  # Server names
+                server_id = WORLD_IDS[i]  # Save server id
                 try:
-                    open_continents = await _get_open_zones(client, server_id) # Get open continents of server_id
-                except auraxium.errors.ServerError as ServerError: # Handle Unknown server error
+                    # Get open continents of server_id
+                    open_continents = await _get_open_zones(client, server_id)
+                except auraxium.errors.ServerError as ServerError:  # Handle Unknown server error
                     log.error(ServerError)
                     pass
                 # List open continents with names
                 named_open_continents = []
                 for s in open_continents:
                     named_open_continents.append(_ZONE_NAMES[s])
-                
                 continent_status = {
                     'Amerish': 'closed',
                     'Esamir': 'closed',
@@ -274,24 +286,27 @@ async def main():
                 db = await aiosqlite.connect('continents.db')
                 timestamp = time.time()
                 server_table = [
-                (continent_status['Amerish'], timestamp, '1'), 
-                (continent_status['Esamir'], timestamp, '2'), 
-                (continent_status['Hossin'], timestamp, '3'), 
-                (continent_status['Indar'], timestamp, '4'), 
-                (continent_status['Oshur'], timestamp, '5')
+                    (continent_status['Amerish'], timestamp, '1'),
+                    (continent_status['Esamir'], timestamp, '2'),
+                    (continent_status['Hossin'], timestamp, '3'),
+                    (continent_status['Indar'], timestamp, '4'),
+                    (continent_status['Oshur'], timestamp, '5')
                 ]
-                await db.executemany(f"UPDATE {i} SET status = ?, time = ? WHERE id = ?;", server_table)
+                await db.executemany(
+                    f"UPDATE {i} SET status = ?, time = ? WHERE id = ?;", server_table)
                 log.info(f"Updated {i}")
                 await db.commit()
                 await db.close()
                 await asyncio.sleep(6)
             elapsed = time.perf_counter() - t
             log.info(f"Query completed in {round(elapsed, 2)}s")
+            if loop is False:
+                break
             sleep_time = 60
             log.info(f"Sleeping for {sleep_time}s...")
             await asyncio.sleep(sleep_time)
 
-# if __name__ == '__main__':
-#     loop = asyncio.new_event_loop()
-#     loop.create_task(main())
-#     loop.run_forever()
+# For running census_client.py independently of bot.py for development
+if __name__ == '__main__':
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(main(True))  # True: main() runs forever, False: main() runs once
