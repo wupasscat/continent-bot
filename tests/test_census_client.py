@@ -1,6 +1,5 @@
 import pytest
 
-import asyncio
 import auraxium
 import aiosqlite
 
@@ -10,16 +9,20 @@ pytest_plugins = ('pytest_asyncio')
 
 API_KEY = census_client.API_KEY
 
+
 # Test _get_open_zones()
 @pytest.mark.parametrize("server_id", [1, 10, 13, 17, 19, 40])
 @pytest.mark.asyncio
 async def test_open_zones(server_id):
     async with auraxium.Client(service_id=API_KEY) as client:
-        open_continents = await census_client._get_open_zones(client, server_id)
+        open_continents = await census_client._get_open_zones(client,
+                                                              server_id)
         assert type(open_continents) == list
 
+
 # Test db_setup()
-@pytest.mark.parametrize("server", ["connery", "miller", "cobalt", "emerald", "jaeger", "soltech"])
+@pytest.mark.parametrize("server", ["connery", "miller", "cobalt", "emerald",
+                                    "jaeger", "soltech"])
 @pytest.mark.asyncio
 async def test_db_setup(server):
     ZONE_NAMES = ['amerish', 'esamir', 'hossin', 'indar', 'oshur']
@@ -34,8 +37,10 @@ async def test_db_setup(server):
             assert row[2] == 'open' or 'closed'
     await db.close()
 
+
 @pytest.mark.slow
-@pytest.mark.parametrize("server", ["connery", "miller", "cobalt", "emerald", "jaeger", "soltech"])
+@pytest.mark.parametrize("server", ["connery", "miller", "cobalt", "emerald",
+                                    "jaeger", "soltech"])
 @pytest.mark.asyncio
 async def test_main(server):
     ZONE_NAMES = ['amerish', 'esamir', 'hossin', 'indar', 'oshur']
@@ -50,7 +55,7 @@ async def test_main(server):
             assert row[2] == 'open' or 'closed'
             initial_timestamp.append(row[3])
 
-    await census_client.main(False) # False = run once
+    await census_client.main(False)  # False = run once
 
     updated_timestamp = []
     async with db.execute(sql) as cursor:
@@ -58,7 +63,6 @@ async def test_main(server):
             assert row[1] in ZONE_NAMES
             assert row[2] == 'open' or 'closed'
             updated_timestamp.append(row[3])
-    
     for i in range(len(initial_timestamp)):
         assert initial_timestamp[i] != updated_timestamp[i]
 
