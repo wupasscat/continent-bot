@@ -34,3 +34,8 @@
 **/README.md
 **/pyvenv.cfg
 **/pytest.ini
+**/pyproject.toml
+**/.coveragerc
+**/.readthedocs.yaml
+**/junit
+**/.ruff_cache
