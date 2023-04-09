@@ -75,8 +75,6 @@ if LOG_LEVEL == 'DEBUG':
     auraxium_log.addHandler(handler)
 
 # Setup sqlite
-fp = open('continents.db') # Create db file if it doesn't exist
-fp.close()
 
 sql_create_connery_table = """ CREATE TABLE IF NOT EXISTS connery (
                                     id integer PRIMARY KEY,
@@ -218,6 +216,14 @@ async def _get_open_zones(client: auraxium.Client, world_id: int) -> List[int]:
     return open_zones
 
 async def db_setup():
+    try:
+        f = open("continents.db", "x")
+        f.close
+    except FileExistsError:
+        log.info("Found existing database!")
+    else:
+        log.info("Database not found. Created a new one!")
+
     async with aiosqlite.connect('continents.db') as db:
         await db.execute(sql_create_connery_table)
         await db.execute(sql_create_miller_table)
