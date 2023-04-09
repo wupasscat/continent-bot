@@ -4,7 +4,8 @@
 |[Python script](#python-script)
 
 # Using Docker (recommended)
-https://hub.docker.com/r/wupasscat/continentbot
+[GitHub Packages](https://github.com/wupasscat/continent-bot/pkgs/container/continentbot) (preferred)  
+[Docker Hub](https://hub.docker.com/r/wupasscat/continentbot)  
 
 |Contents
 --- |
@@ -21,7 +22,7 @@ docker run -d --name continent-bot \
     -e DISCORD_TOKEN=discord bot token \
     -e CENSUS_API_KEY=s:example \
     -e LOG_LEVEL=INFO \
-    wupasscat/continentbot:latest
+    ghcr.io/wupasscat/continentbot:latest
 ```
 ### Environment Variables:
 - `DISCORD_TOKEN` found in the "Bot" section of your Discord application
@@ -52,7 +53,7 @@ services:
             - DISCORD_TOKEN=discord bot token
             - CENSUS_API_KEY=s:example
             - LOG_LEVEL=INFO
-        image: 'wupasscat/continentbot:latest'
+        image: 'ghcr.io/wupasscat/continentbot:latest'
 ```
 ### Environment Variables:
 - `DISCORD_TOKEN` found in the "Bot" section of your Discord application
