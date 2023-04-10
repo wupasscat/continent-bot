@@ -90,6 +90,16 @@ client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
 
+WORLD_IDS = {
+    'connery': 1,
+    'miller': 10,
+    'cobalt': 13,
+    'emerald': 17,
+    'jaeger': 19,
+    'soltech': 40
+}
+
+
 # Collect data from db and create embed
 async def get_from_db(server: str):
     db = await aiosqlite.connect('continents.db')
@@ -124,28 +134,47 @@ async def get_from_db(server: str):
               icon_url="https://raw.githubusercontent.com/wupasscat/continent-bot/main/assets/exclamation-circle.png")
         else:
             embedVar.set_footer(
-              text=f"All systems operational",
+              text="All systems operational"
               icon_url="https://raw.githubusercontent.com/wupasscat/continent-bot/main/assets/check-circle.png")
     await db.close()
     return embedVar
 
 
 # Discord
-# Refresh button
+# Select menu and refresh button
 class MyView(discord.ui.View):
     def __init__(self, server):
         super().__init__(timeout=None)
         self.server = server
 
-    @discord.ui.button(label="Refresh", style=discord.ButtonStyle.primary,
-                       emoji="🔄")
-    async def refresh_button(self, interaction: discord.Interaction,
-                             button: discord.ui.Button):
+    @discord.ui.select(
+        placeholder = "Select a server",
+        min_values = 1,
+        max_values = 1,
+        options = [
+            discord.SelectOption(label="Connery", emoji="🇺🇸", description="US West"),
+            discord.SelectOption(label="Miller", emoji="🇪🇺", description="Europe"),
+            discord.SelectOption(label="Cobalt", emoji="🇪🇺", description="Europe"),
+            discord.SelectOption(label="Emerald", emoji="🇺🇸", description="US East"),
+            discord.SelectOption(label="Jaeger", emoji="⚔️", 
+                                 description="Community-run events"),
+            discord.SelectOption(label="SolTech", emoji="🇯🇵", description="Asia")
+        ],
+        row = 0
+    )
+    async def select_callback(self, interaction: discord.Interaction, select):
+        selected_server = select.values[0]
+        selected_server = selected_server[0].lower() + selected_server[1:]
+        embedVar = await get_from_db(selected_server)
+        await interaction.response.edit_message(embed=embedVar, view=self)
+
+    @discord.ui.button(label="Refresh", style=discord.ButtonStyle.primary, emoji="🔄", row=1)
+    async def refresh_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         log.info(f"Refresh /continents triggered for {self.server[0].upper() + self.server[1:]}")
         embedVar = await get_from_db(self.server)
         await interaction.response.edit_message(embed=embedVar, view=self)
-
-
+    
+    
 # /continents
 @tree.command(name="continents", description="See open continents on a server")
 async def continents(interaction, server: Literal[
