@@ -18,9 +18,9 @@ permissions:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
+    env:
+      API_KEY: ${{ secrets.API_KEY }}
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python 3.11
@@ -31,7 +31,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install ruff pytest pytest-cov codecov
+        pip install ruff pytest pytest-asyncio pytest-cov codecov
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with Ruff
       run: |
