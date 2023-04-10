@@ -89,6 +89,7 @@ intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
+
 WORLD_IDS = {
     'connery': 1,
     'miller': 10,
