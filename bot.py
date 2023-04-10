@@ -134,7 +134,7 @@ async def get_from_db(server: str):
               icon_url="https://raw.githubusercontent.com/wupasscat/continent-bot/main/assets/exclamation-circle.png")
         else:
             embedVar.set_footer(
-              text="All systems operational"
+              text="All systems operational",
               icon_url="https://raw.githubusercontent.com/wupasscat/continent-bot/main/assets/check-circle.png")
     await db.close()
     return embedVar
