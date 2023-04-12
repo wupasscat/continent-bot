@@ -43,6 +43,13 @@ class CustomFormatter(logging.Formatter):  # Formatter
         return formatter.format(record)
     
 
+# log = logging.getLogger()
+# log.setLevel(LOG_LEVEL)
+# handler = logging.StreamHandler()
+# handler.setFormatter(CustomFormatter())
+# log.addHandler(handler)
+
+
 log = logging.getLogger()
 log.setLevel(LOG_LEVEL)
 handler = logging.StreamHandler()

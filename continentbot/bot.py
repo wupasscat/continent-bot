@@ -3,79 +3,39 @@ import logging.handlers
 import os
 import time
 from typing import Literal
+import redis.asyncio as redis
 
 import aiosqlite
 import discord
 from discord import app_commands
 from dotenv import load_dotenv
 
-from census_client import main
+# from census_client import main
+from utils import log, is_docker
 
 
-# Check if bot.py is in a container
-def is_docker():
-    path = '/proc/self/cgroup'
-    return (
-        os.path.exists('/.dockerenv') or
-        os.path.isfile(path) and any('docker' in line for line in open(path))
-    )
-
-
-docker = is_docker()
-# Change secrets variables accordingly
-if docker is True:  # Use Docker ENV variables
-    TOKEN = os.getenv('DISCORD_TOKEN')
-    LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
-
-else:  # Use .env file for secrets
+if is_docker is False:  # Use .env file for secrets if outside of a container
     load_dotenv()
-    TOKEN = os.getenv('DISCORD_TOKEN')
-    LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
 
-DEBUG = logging.DEBUG
-INFO = logging.INFO
-WARNING = logging.WARNING
-ERROR = logging.ERROR
-CRITICAL = logging.CRITICAL
-
-
-# Configure logging
-class CustomFormatter(logging.Formatter):  # Formatter
-
-    grey = "\x1b[38;20m"
-    blue = "\x1b[34m"
-    yellow = "\x1b[33;20m"
-    red = "\x1b[31;20m"
-    bold_red = "\x1b[31;1m"
-    reset = "\x1b[0m"
-    format = """%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"""
-
-    FORMATS = {
-        logging.DEBUG: grey + format + reset,
-        logging.INFO: blue + format + reset,
-        logging.WARNING: yellow + format + reset,
-        logging.ERROR: red + format + reset,
-        logging.CRITICAL: bold_red + format + reset
-    }
-
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        dt_fmt = '%m/%d/%Y %I:%M:%S'
-        formatter = logging.Formatter(log_fmt, dt_fmt)
-        return formatter.format(record)
+TOKEN = os.getenv('DISCORD_TOKEN') or None
+LOG_LEVEL = os.getenv('LOG_LEVEL') or 'logging.INFO'
+REDIS_HOST = os.getenv('REDIS_HOST') or 'localhost'
+REDIS_PORT = os.getenv('REDIS_PORT') or 6379
+REDIS_DB = os.getenv('REDIS_DB') or 0
+REDIS_PASS = os.getenv('REDIS_PASS') or None
 
 
 # Create logger
 logging.getLogger('discord.http').setLevel(logging.INFO)
-log = logging.getLogger('discord')
-if not LOG_LEVEL:
-    log.setLevel(logging.INFO)
-else:
-    log.setLevel(LOG_LEVEL)
+# log = logging.getLogger('discord')
+# if not LOG_LEVEL:
+#     log.setLevel(logging.INFO)
+# else:
+#     log.setLevel(LOG_LEVEL)
 
-handler = logging.StreamHandler()
-handler.setFormatter(CustomFormatter())
-log.addHandler(handler)
+# handler = logging.StreamHandler()
+# handler.setFormatter(CustomFormatter())
+# log.addHandler(handler)
 # Disable VoiceClient warnings
 discord.VoiceClient.warn_nacl = False
 
@@ -106,6 +66,12 @@ async def get_from_db(server: str):
     sql = f"""
     SELECT * FROM {server}
     """
+    r = await redis.Redis(
+        host=REDIS_HOST,
+        port=REDIS_PORT,
+        db=REDIS_DB,
+        password=REDIS_PASS
+    )
     async with db.execute(sql) as cursor:  # Execute query
         # Create embed title
         embedVar = discord.Embed(title=server[0].upper() + server[1:],
@@ -125,6 +91,11 @@ async def get_from_db(server: str):
             row_timestamps.append(row[3])  # Record timestamps
         # Blank field to fill 3x3 space
         embedVar.add_field(name="\u200B", value="\u200B", inline=True)
+        pop = await r.hgetall(name=f'{server}-population')
+        embedVar.add_field(name="Population", value=f"""Total: {pop['average']}
+        NC: {pop['nc']}
+        TR: {pop['tr']}
+        VS: {pop['vs']}""")
         data_age = round(time.time() - max(row_timestamps))
         mm, ss = divmod(data_age, 60)
         hh, mm = divmod(mm, 60)
@@ -189,6 +160,7 @@ async def continents(interaction, server: Literal[
 async def on_ready():
     await tree.sync()
     log.info('Bot has logged in as {0.user}'.format(client))
-    await main(True)  # Run census_client.py
+    # await main(True)  # Run census_client.py
 
-client.run(TOKEN, log_handler=None)
+if __name__ == '__main__':
+    client.run(TOKEN, log_handler=None)

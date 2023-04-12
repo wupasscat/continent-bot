@@ -7,79 +7,67 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, cast
 
 import aiosqlite
 import auraxium
+# import redis.asyncio as redis
 from dotenv import load_dotenv
+from utils import log, is_docker
 
 
-# Check if census_client.py is in a container
-def is_docker():
-    path = '/proc/self/cgroup'
-    return (
-        os.path.exists('/.dockerenv') or
-        os.path.isfile(path) and any('docker' in line for line in open(path))
-    )
-
-
-docker = is_docker()
 # Change secrets variables accordingly
-if docker is True:  # Use Docker ENV variables
-    API_KEY = os.getenv('CENSUS_API_KEY') or 's:example'
-    LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
-else:  # Use .env file for secrets
+if is_docker() is False:  # Use .env file for secrets
     load_dotenv()
-    API_KEY = os.getenv('API_KEY') or 's:example'
-    LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
 
-DEBUG = logging.DEBUG
-INFO = logging.INFO
-WARNING = logging.WARNING
-ERROR = logging.ERROR
-CRITICAL = logging.CRITICAL
+API_KEY = os.getenv('CENSUS_API_KEY') or 's:example'
+LOG_LEVEL = os.getenv('LOG_LEVEL') or 'logging.INFO'
+REDIS_HOST = os.getenv('REDIS_HOST') or 'localhost'
+REDIS_PORT = os.getenv('REDIS_PORT') or 6379
+REDIS_DB = os.getenv('REDIS_DB') or 0
+REDIS_PASS = os.getenv('REDIS_PASS') or None
 
 
 # Configure logging
-class CustomFormatter(logging.Formatter):
+# class CustomFormatter(logging.Formatter):
 
-    grey = "\x1b[38;20m"
-    blue = "\x1b[34m"
-    yellow = "\x1b[33;20m"
-    red = "\x1b[31;20m"
-    bold_red = "\x1b[31;1m"
-    reset = "\x1b[0m"
-    format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
+#     grey = "\x1b[38;20m"
+#     blue = "\x1b[34m"
+#     yellow = "\x1b[33;20m"
+#     red = "\x1b[31;20m"
+#     bold_red = "\x1b[31;1m"
+#     reset = "\x1b[0m"
+#     format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
 
-    FORMATS = {
-        logging.DEBUG: grey + format + reset,
-        logging.INFO: blue + format + reset,
-        logging.WARNING: yellow + format + reset,
-        logging.ERROR: red + format + reset,
-        logging.CRITICAL: bold_red + format + reset
-    }
+#     FORMATS = {
+#         logging.DEBUG: grey + format + reset,
+#         logging.INFO: blue + format + reset,
+#         logging.WARNING: yellow + format + reset,
+#         logging.ERROR: red + format + reset,
+#         logging.CRITICAL: bold_red + format + reset
+#     }
 
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        dt_fmt = '%m/%d/%Y %I:%M:%S'
-        formatter = logging.Formatter(log_fmt, dt_fmt)
-        return formatter.format(record)
+#     def format(self, record):
+#         log_fmt = self.FORMATS.get(record.levelno)
+#         dt_fmt = '%m/%d/%Y %I:%M:%S'
+#         formatter = logging.Formatter(log_fmt, dt_fmt)
+#         return formatter.format(record)
 
 
-# Create logger
-log = logging.getLogger('census')
-if not LOG_LEVEL:
-    log.setLevel(logging.INFO)
-else:
-    log.setLevel(LOG_LEVEL)
+# # Create logger
+# log = logging.getLogger('census')
+# if not LOG_LEVEL:
+#     log.setLevel(logging.INFO)
+# else:
+#     log.setLevel(LOG_LEVEL)
 
-handler = logging.StreamHandler()
-handler.setFormatter(CustomFormatter())
-log.addHandler(handler)
+# handler = logging.StreamHandler()
+# handler.setFormatter(CustomFormatter())
+# log.addHandler(handler)
 
 if LOG_LEVEL == 'DEBUG':
     auraxium_log = logging.getLogger('auraxium')
     auraxium_log.setLevel(logging.DEBUG)
-    auraxium_log.addHandler(handler)
+    auraxium_log.addHandler(logging.StreamHandler)
+
 
 # Setup sqlite
-
 sql_create_connery_table = """ CREATE TABLE IF NOT EXISTS connery (
                                     id integer PRIMARY KEY,
                                     continent text,
@@ -255,8 +243,20 @@ async def db_setup():
                 log.error(error)
 
 
-async def main(loop: bool):
+async def main(redis_host: str,
+               redis_port: int,
+               redis_db: int,
+               redis_pass: str,
+               loop: bool = True,
+               ):
     await db_setup()
+    # r = redis.Redis(
+    #     host=redis_host,
+    #     port=redis_port,
+    #     db=redis_db,
+    #     password=redis_pass
+    # )
+    # await r.publish("channel:continents", "test")
     while True:
         async with auraxium.Client(service_id=API_KEY) as client:
             log.info("Querying API...")
@@ -302,9 +302,10 @@ async def main(loop: bool):
             log.info(f"Query completed in {round(elapsed, 2)}s")
             if loop is False:
                 break
-            sleep_time = 60
+            sleep_time = 30
             log.info(f"Sleeping for {sleep_time}s...")
             await asyncio.sleep(sleep_time)
+
 
 # For running census_client.py independently of bot.py for development
 if __name__ == '__main__':
