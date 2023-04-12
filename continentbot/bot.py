@@ -70,7 +70,8 @@ async def get_from_db(server: str):
         host=REDIS_HOST,
         port=REDIS_PORT,
         db=REDIS_DB,
-        password=REDIS_PASS
+        password=REDIS_PASS,
+        decode_responses=True
     )
     async with db.execute(sql) as cursor:  # Execute query
         # Create embed title
@@ -92,10 +93,13 @@ async def get_from_db(server: str):
         # Blank field to fill 3x3 space
         embedVar.add_field(name="\u200B", value="\u200B", inline=True)
         pop = await r.hgetall(name=f'{server}-population')
-        embedVar.add_field(name="Population", value=f"""Total: {pop['average']}
-        NC: {pop['nc']}
-        TR: {pop['tr']}
-        VS: {pop['vs']}""")
+        embedVar.add_field(name="Population", 
+                           value=f"""
+                           :earth_americas: **Total**: {pop['average']}
+                           :blue_circle: **NC**: {pop['nc']}
+                           :red_circle: **TR**: {pop['tr']}
+                           :purple_circle: **VS**: {pop['vs']}
+                           """)
         data_age = round(time.time() - max(row_timestamps))
         mm, ss = divmod(data_age, 60)
         hh, mm = divmod(mm, 60)
