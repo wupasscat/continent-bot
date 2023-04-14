@@ -70,9 +70,3 @@ if __name__=='__main__':
         asyncio.run(database())
     except asyncio.exceptions.CancelledError as e:
         raise SystemExit(e)
-
-
-
-
-
-
