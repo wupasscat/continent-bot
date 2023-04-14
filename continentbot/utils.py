@@ -10,12 +10,11 @@ def is_docker() -> bool:
     )
 
 
-if is_docker is True:  # Use Docker ENV variables
-    LOG_LEVEL = os.getenv('LOG_LEVEL') or 'logging.INFO'
-
-else:  # Use .env file for secrets
+if is_docker is False:  # Use .env file for secrets if outside of a container
     load_dotenv()
-    LOG_LEVEL = os.getenv('LOG_LEVEL') or 'logging.INFO'
+
+
+LOG_LEVEL = os.getenv('LOG_LEVEL') or 'logging.INFO'
 
 
 class CustomFormatter(logging.Formatter):  # Formatter

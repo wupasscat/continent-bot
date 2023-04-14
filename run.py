@@ -57,10 +57,8 @@ async def startServices():
             )
         )
     population_task = asyncio.create_task(
-        population(
-            
+        population()
         )
-    )
     
     # await continent(redis_host=REDIS_HOST,
     #                              redis_port=REDIS_PORT, 

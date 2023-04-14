@@ -1,5 +1,5 @@
 import os
-import requests
+import aiohttp
 import redis.asyncio as redis
 import asyncio
 from dotenv import load_dotenv
@@ -11,7 +11,6 @@ if is_docker is False:  # Use .env file for secrets if outside of a container
     load_dotenv()
 
 
-LOG_LEVEL = os.getenv('LOG_LEVEL') or 'logging.INFO'
 REDIS_HOST = os.getenv('REDIS_HOST') or 'localhost'
 REDIS_PORT = os.getenv('REDIS_PORT') or 6379
 REDIS_DB = os.getenv('REDIS_DB') or 0
@@ -28,28 +27,40 @@ WORLD_IDS = {
 }
 
 
-def _get_from_api(world_id: int) -> dict:
+# def _get_from_api(world_id: int) -> dict:
+#     url = f'https://agg.ps2.live/population/{world_id}'
+#     try:
+#         response = requests.get(url)
+#         response.raise_for_status()
+#     except requests.RequestException as error:
+#         log.error(error)
+#     json = response.json()
+#     return json
+
+async def _get_from_api(world_id: int) -> dict:
     url = f'https://agg.ps2.live/population/{world_id}'
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-    except requests.RequestException as error:
-        log.error(error)
-    json = response.json()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            log.debug(response.raise_for_status())
+            json = await response.json()
     return json
 
 
-async def database():
+async def database(redis_host=REDIS_HOST,
+                   redis_port=REDIS_PORT, 
+                   redis_db=REDIS_DB, 
+                   redis_pass=REDIS_PASS
+    ):
     conn = await redis.Redis(
-        host=REDIS_HOST,
-        port=REDIS_PORT,
-        db=REDIS_DB,
-        password=REDIS_PASS
+        host=redis_host,
+        port=redis_port,
+        db=redis_db,
+        password=redis_pass
     )
     async with conn.pipeline(transaction=True) as pipe:
         while True:
             for world in WORLD_IDS:
-                pop = _get_from_api(world_id=WORLD_IDS[world])
+                pop = await _get_from_api(world_id=WORLD_IDS[world])
                 dict_response = {
                     'id': pop['id'],
                     'average': pop['average'],

@@ -250,13 +250,6 @@ async def main(redis_host: str,
                loop: bool = True,
                ):
     await db_setup()
-    # r = redis.Redis(
-    #     host=redis_host,
-    #     port=redis_port,
-    #     db=redis_db,
-    #     password=redis_pass
-    # )
-    # await r.publish("channel:continents", "test")
     while True:
         async with auraxium.Client(service_id=API_KEY) as client:
             log.info("Querying API...")
