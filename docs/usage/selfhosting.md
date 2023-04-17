@@ -1,35 +1,33 @@
-|Contents
---- |
-|[Using Docker](#using-docker-recommended)
-|[Python script](#python-script)
-
 # Using Docker (recommended)
 [GitHub Packages](https://github.com/wupasscat/continent-bot/pkgs/container/continentbot) (preferred)  
 [Docker Hub](https://hub.docker.com/r/wupasscat/continentbot)  
 
-|Contents
---- |
-|[Docker run](#docker-run)
-|[Docker compose](#docker-compose)
-|[Unraid](#unraid)
-
 ## Docker run
 ### Prerequisites:
 - Docker ([install guide](https://docs.docker.com/engine/install/))
+- Redis ([Docker Hub](https://hub.docker.com/_/redis/))
 - Discord application with bot ([create one here](https://discord.com/developers/applications))
 ```{code-block} bash
 docker run -d --name continent-bot \
-    -e DISCORD_TOKEN=discord bot token \
-    -e CENSUS_API_KEY=s:example \
+    -e DISCORD_TOKEN= \
+    -e API_KEY= \
     -e LOG_LEVEL=INFO \
+    -e REDIS_HOST= \
+    -e REDIS_PORT=
+    -e REDIS_DB=0
+    -e REDIS_PASS=
     ghcr.io/wupasscat/continentbot:latest
 ```
 ### Environment Variables:
 - `DISCORD_TOKEN` found in the "Bot" section of your Discord application
-- `CENSUS_API_KEY` Daybreak Games Census API service ID  
+- `API_KEY` Daybreak Games Census API service ID  
     ```{warning}
-    You can use the default value `s:example` for testing but you will be limited to 10 requests per minute.  
+    Do not use `s:example`! This service ID is heavily rate-limited and will not work.
     It is recommended that you apply for a service ID [here](https://census.daybreakgames.com/#devSignup)
+- `REDIS_HOST` IP or hostname of your Redis instance
+- `REDIS_PORT` the port that Redis listens on
+- `REDIS_DB` the ID of your redis database
+- `REDIS_PASS` the password to your Redis instance
 
 <br />
 
@@ -41,6 +39,7 @@ docker run -d --name continent-bot \
 ### Prerequisites:
 - Docker ([install guide](https://docs.docker.com/engine/install/))
 - Docker compose ([install guide](https://docs.docker.com/compose/install/))
+- Redis ([Docker Hub](https://hub.docker.com/_/redis/))
 - Discord application with bot ([create one here](https://discord.com/developers/applications))  
 
 From [docker-compose.yml](https://github.com/wupasscat/continent-bot/blob/main/docker-compose.yml):
@@ -50,17 +49,25 @@ services:
     continentbot:
         container_name: continent-bot
         environment:
-            - DISCORD_TOKEN=discord bot token
-            - CENSUS_API_KEY=s:example
+            - DISCORD_TOKEN=your discord bot token
+            - API_KEY=
             - LOG_LEVEL=INFO
+            - REDIS_HOST=
+            - REDIS_PORT=
+            - REDIS_DB=
+            - REDIS_PASS=
         image: 'ghcr.io/wupasscat/continentbot:latest'
 ```
 ### Environment Variables:
 - `DISCORD_TOKEN` found in the "Bot" section of your Discord application
-- `CENSUS_API_KEY` Daybreak Games Census API service ID  
+- `API_KEY` Daybreak Games Census API service ID  
     ```{warning}
-    You can use the default value `s:example` for testing but you will be limited to 10 requests per minute.  
+    Do not use `s:example`! This service ID is heavily rate-limited and will not work.
     It is recommended that you apply for a service ID [here](https://census.daybreakgames.com/#devSignup)
+- `REDIS_HOST` IP or hostname of your Redis instance
+- `REDIS_PORT` the port that Redis listens on
+- `REDIS_DB` the ID of your redis database
+- `REDIS_PASS` the password to your Redis instance
 
 
 <br />
@@ -73,18 +80,21 @@ services:
 [Template support thread](https://forums.unraid.net/topic/135184-support-wupasscats-template-repository)
 ### Prerequisites:
 - Unraid Community Apps (CA) plugin ([install guide](https://forums.unraid.net/topic/38582-plug-in-community-applications/))
+- Redis ([Docker Hub](https://hub.docker.com/_/redis/))
 
 ### Setup:
 1. Search for `ps2-continent-bot` in the "Apps" tab of your Unraid dashboard
 
-![unraid.png](https://raw.githubusercontent.com/wupasscat/continent-bot/main/assets/unraid.png)
-
 ### Environment Variables:
-- "Discord Bot Token" found in the "Bot" section of your Discord application
-- "PlanetSide 2 API service ID" Daybreak Games Census API service ID  
+- `DISCORD_TOKEN` found in the "Bot" section of your Discord application
+- `API_KEY` Daybreak Games Census API service ID  
     ```{warning}
-    You can use the default value `s:example` for testing but you will be limited to 10 requests per minute.  
+    Do not use `s:example`! This service ID is heavily rate-limited and will not work.
     It is recommended that you apply for a service ID [here](https://census.daybreakgames.com/#devSignup)
+- `REDIS_HOST` IP or hostname of your Redis instance
+- `REDIS_PORT` the port that Redis listens on
+- `REDIS_DB` the ID of your redis database
+- `REDIS_PASS` the password to your Redis instance
 
 
 <br />
@@ -105,6 +115,7 @@ services:
 - `git`
 - `python3`
 - `python3-pip`
+- Redis
 - Discord application with bot ([create one here](https://discord.com/developers/applications))
 
 ### Setup:
@@ -125,14 +136,22 @@ services:
     ```{code-block} python
     # .env
     DISCORD_TOKEN=your discord bot token
-    API_KEY=s:example
+    API_KEY=
     LOG_LEVEL=INFO
+    REDIS_HOST=
+    REDIS_PORT=
+    REDIS_DB=
+    REDIS_PASS=
     ```
     - `DISCORD_TOKEN` found in the "Bot" section of your Discord application
     - `API_KEY` Daybreak Games Census API service ID  
-    ```{warning}
-    You can use the default value `s:example` for testing but you will be limited to 10 requests per minute.  
-    It is recommended that you apply for a service ID [here](https://census.daybreakgames.com/#devSignup)
+        ```{warning}
+        Do not use `s:example`! This service ID is heavily rate-limited and will not work.
+        It is recommended that you apply for a service ID [here](https://census.daybreakgames.com/#devSignup)
+    - `REDIS_HOST` IP or hostname of your Redis instance
+    - `REDIS_PORT` the port that Redis listens on
+    - `REDIS_DB` the ID of your redis database
+    - `REDIS_PASS` the password to your Redis instance
 
     
 4. Run script
