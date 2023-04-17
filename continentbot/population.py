@@ -4,10 +4,10 @@ import redis.asyncio as redis
 import asyncio
 from dotenv import load_dotenv
 
-from utils import is_docker, log
+from .utils import is_docker, log
 
 
-if is_docker is False:  # Use .env file for secrets if outside of a container
+if is_docker() is False:  # Use .env file for secrets if outside of a container
     load_dotenv()
 
 
@@ -58,22 +58,25 @@ async def database(redis_host=REDIS_HOST,
         password=redis_pass
     )
     async with conn.pipeline(transaction=True) as pipe:
-        while True:
-            for world in WORLD_IDS:
+        #while True:
+        for world in WORLD_IDS:
+            try:
                 pop = await _get_from_api(world_id=WORLD_IDS[world])
-                dict_response = {
-                    'id': pop['id'],
-                    'average': pop['average'],
-                    'nc': pop['factions']['nc'],  # Get faction values from nested dictionary
-                    'tr': pop['factions']['tr'],
-                    'vs': pop['factions']['vs']
-                }
-                command = await pipe.hset(  # Create redis command
-                    name=f'{world}-population', 
-                    mapping=dict_response).execute()
-                assert command  # Execute redis command
-                log.debug(f"Updated {world} population")
-            await asyncio.sleep(60)  # API refreshes every 180 seconds
+            except asyncio.exceptions.CancelledError as e:
+                raise SystemExit(e)
+            dict_response = {
+                'id': pop['id'],
+                'average': pop['average'],
+                'nc': pop['factions']['nc'],  # Get faction values from nested dictionary
+                'tr': pop['factions']['tr'],
+                'vs': pop['factions']['vs']
+            }
+            command = await pipe.hset(  # Create redis command
+                name=f'{world}-population', 
+                mapping=dict_response).execute()
+            assert command  # Execute redis command
+            log.debug(f"Updated {world} population")
+        await asyncio.sleep(1)
 
 
 if __name__=='__main__':

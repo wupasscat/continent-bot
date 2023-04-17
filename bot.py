@@ -4,21 +4,24 @@ import os
 import time
 from typing import Literal
 import redis.asyncio as redis
+import asyncio
 
 import aiosqlite
 import discord
 from discord import app_commands
+from discord.ext import tasks
 from dotenv import load_dotenv
 
 # from census_client import main
-from utils import log, is_docker
+from continentbot import continent, population
+from continentbot.utils import log, is_docker
 
 
-if is_docker is False:  # Use .env file for secrets if outside of a container
+if is_docker() is False:  # Use .env file for secrets if outside of a container
     load_dotenv()
 
 TOKEN = os.getenv('DISCORD_TOKEN') or None
-LOG_LEVEL = os.getenv('LOG_LEVEL') or 'logging.INFO'
+LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
 REDIS_HOST = os.getenv('REDIS_HOST') or 'localhost'
 REDIS_PORT = os.getenv('REDIS_PORT') or 6379
 REDIS_DB = os.getenv('REDIS_DB') or 0
@@ -27,15 +30,7 @@ REDIS_PASS = os.getenv('REDIS_PASS') or None
 
 # Create logger
 logging.getLogger('discord.http').setLevel(logging.INFO)
-# log = logging.getLogger('discord')
-# if not LOG_LEVEL:
-#     log.setLevel(logging.INFO)
-# else:
-#     log.setLevel(LOG_LEVEL)
 
-# handler = logging.StreamHandler()
-# handler.setFormatter(CustomFormatter())
-# log.addHandler(handler)
 # Disable VoiceClient warnings
 discord.VoiceClient.warn_nacl = False
 
@@ -45,8 +40,26 @@ if db_exists is False:
     log.error("Database does not exist!")
 
 # Setup Discord
-intents = discord.Intents.default()
-client = discord.Client(intents=intents)
+# intents = discord.Intents.default()
+# client = discord.Client(intents=intents)
+# tree = app_commands.CommandTree(client)
+
+class CustomClient(discord.Client):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Attributes
+
+    async def setup_hook(self) -> None:
+        self.services.start()
+    
+    @tasks.loop(seconds=30)
+    async def services(self):
+        asyncio.gather(continent(REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASS), population())
+        
+        
+    
+client = CustomClient(intents = discord.Intents.default())
 tree = app_commands.CommandTree(client)
 
 
@@ -95,7 +108,7 @@ async def get_from_db(server: str):
         pop = await r.hgetall(name=f'{server}-population')
         embedVar.add_field(name="Population", 
                            value=f"""
-                           :earth_americas: **Total**: {pop['average']}
+                           :globe_with_meridians: **Total**: {pop['average']}
                            :blue_circle: **NC**: {pop['nc']}
                            :red_circle: **TR**: {pop['tr']}
                            :purple_circle: **VS**: {pop['vs']}
@@ -139,8 +152,9 @@ class MyView(discord.ui.View):
     )
     async def select_callback(self, interaction: discord.Interaction, select):
         selected_server = select.values[0]
-        selected_server = selected_server[0].lower() + selected_server[1:]
+        selected_server = selected_server.lower()
         embedVar = await get_from_db(selected_server)
+        self.server = selected_server
         await interaction.response.edit_message(embed=embedVar, view=self)
 
     @discord.ui.button(label="Refresh", style=discord.ButtonStyle.primary, emoji="🔄", row=1)
@@ -164,7 +178,6 @@ async def continents(interaction, server: Literal[
 async def on_ready():
     await tree.sync()
     log.info('Bot has logged in as {0.user}'.format(client))
-    # await main(True)  # Run census_client.py
 
 if __name__ == '__main__':
     client.run(TOKEN, log_handler=None)

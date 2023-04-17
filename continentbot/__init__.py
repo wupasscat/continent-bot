@@ -1,11 +1,7 @@
-from .bot import client
+# from .bot import client
 from .census_client import main
 from .population import database
 
-
-def bot_client():
-    """Returns the Discord client"""
-    return client
 
 def continent(redis_host: str,
               redis_port: int,
