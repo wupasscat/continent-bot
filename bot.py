@@ -3,79 +3,34 @@ import logging.handlers
 import os
 import time
 from typing import Literal
+import redis.asyncio as redis
+import asyncio
 
 import aiosqlite
 import discord
 from discord import app_commands
+from discord.ext import tasks
 from dotenv import load_dotenv
 
-from census_client import main
+# from census_client import main
+from continentbot import continent, population
+from continentbot.utils import log, is_docker
 
 
-# Check if bot.py is in a container
-def is_docker():
-    path = '/proc/self/cgroup'
-    return (
-        os.path.exists('/.dockerenv') or
-        os.path.isfile(path) and any('docker' in line for line in open(path))
-    )
-
-
-docker = is_docker()
-# Change secrets variables accordingly
-if docker is True:  # Use Docker ENV variables
-    TOKEN = os.getenv('DISCORD_TOKEN')
-    LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
-
-else:  # Use .env file for secrets
+if is_docker() is False:  # Use .env file for secrets if outside of a container
     load_dotenv()
-    TOKEN = os.getenv('DISCORD_TOKEN')
-    LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
 
-DEBUG = logging.DEBUG
-INFO = logging.INFO
-WARNING = logging.WARNING
-ERROR = logging.ERROR
-CRITICAL = logging.CRITICAL
-
-
-# Configure logging
-class CustomFormatter(logging.Formatter):  # Formatter
-
-    grey = "\x1b[38;20m"
-    blue = "\x1b[34m"
-    yellow = "\x1b[33;20m"
-    red = "\x1b[31;20m"
-    bold_red = "\x1b[31;1m"
-    reset = "\x1b[0m"
-    format = """%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"""
-
-    FORMATS = {
-        logging.DEBUG: grey + format + reset,
-        logging.INFO: blue + format + reset,
-        logging.WARNING: yellow + format + reset,
-        logging.ERROR: red + format + reset,
-        logging.CRITICAL: bold_red + format + reset
-    }
-
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        dt_fmt = '%m/%d/%Y %I:%M:%S'
-        formatter = logging.Formatter(log_fmt, dt_fmt)
-        return formatter.format(record)
+TOKEN = os.getenv('DISCORD_TOKEN') or None
+LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
+REDIS_HOST = os.getenv('REDIS_HOST') or 'localhost'
+REDIS_PORT = os.getenv('REDIS_PORT') or 6379
+REDIS_DB = os.getenv('REDIS_DB') or 0
+REDIS_PASS = os.getenv('REDIS_PASS') or None
 
 
 # Create logger
 logging.getLogger('discord.http').setLevel(logging.INFO)
-log = logging.getLogger('discord')
-if not LOG_LEVEL:
-    log.setLevel(logging.INFO)
-else:
-    log.setLevel(LOG_LEVEL)
 
-handler = logging.StreamHandler()
-handler.setFormatter(CustomFormatter())
-log.addHandler(handler)
 # Disable VoiceClient warnings
 discord.VoiceClient.warn_nacl = False
 
@@ -85,8 +40,26 @@ if db_exists is False:
     log.error("Database does not exist!")
 
 # Setup Discord
-intents = discord.Intents.default()
-client = discord.Client(intents=intents)
+# intents = discord.Intents.default()
+# client = discord.Client(intents=intents)
+# tree = app_commands.CommandTree(client)
+
+class CustomClient(discord.Client):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Attributes
+
+    async def setup_hook(self) -> None:
+        self.services.start()
+    
+    @tasks.loop(seconds=30)
+    async def services(self):
+        asyncio.gather(continent(REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASS), population())
+        
+        
+    
+client = CustomClient(intents = discord.Intents.default())
 tree = app_commands.CommandTree(client)
 
 
@@ -106,6 +79,13 @@ async def get_from_db(server: str):
     sql = f"""
     SELECT * FROM {server}
     """
+    r = await redis.Redis(
+        host=REDIS_HOST,
+        port=REDIS_PORT,
+        db=REDIS_DB,
+        password=REDIS_PASS,
+        decode_responses=True
+    )
     async with db.execute(sql) as cursor:  # Execute query
         # Create embed title
         embedVar = discord.Embed(title=server[0].upper() + server[1:],
@@ -125,6 +105,14 @@ async def get_from_db(server: str):
             row_timestamps.append(row[3])  # Record timestamps
         # Blank field to fill 3x3 space
         embedVar.add_field(name="\u200B", value="\u200B", inline=True)
+        pop = await r.hgetall(name=f'{server}-population')
+        embedVar.add_field(name="Population", 
+                           value=f"""
+                           :globe_with_meridians: **Total**: {pop['average']}
+                           :blue_circle: **NC**: {pop['nc']}
+                           :red_circle: **TR**: {pop['tr']}
+                           :purple_circle: **VS**: {pop['vs']}
+                           """)
         data_age = round(time.time() - max(row_timestamps))
         mm, ss = divmod(data_age, 60)
         hh, mm = divmod(mm, 60)
@@ -164,8 +152,9 @@ class MyView(discord.ui.View):
     )
     async def select_callback(self, interaction: discord.Interaction, select):
         selected_server = select.values[0]
-        selected_server = selected_server[0].lower() + selected_server[1:]
+        selected_server = selected_server.lower()
         embedVar = await get_from_db(selected_server)
+        self.server = selected_server
         await interaction.response.edit_message(embed=embedVar, view=self)
 
     @discord.ui.button(label="Refresh", style=discord.ButtonStyle.primary, emoji="🔄", row=1)
@@ -189,6 +178,6 @@ async def continents(interaction, server: Literal[
 async def on_ready():
     await tree.sync()
     log.info('Bot has logged in as {0.user}'.format(client))
-    await main(True)  # Run census_client.py
 
-client.run(TOKEN, log_handler=None)
+if __name__ == '__main__':
+    client.run(TOKEN, log_handler=None)

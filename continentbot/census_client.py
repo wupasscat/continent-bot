@@ -7,79 +7,71 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, cast
 
 import aiosqlite
 import auraxium
+# import redis.asyncio as redis
 from dotenv import load_dotenv
+from .utils import log, is_docker
 
 
-# Check if census_client.py is in a container
-def is_docker():
-    path = '/proc/self/cgroup'
-    return (
-        os.path.exists('/.dockerenv') or
-        os.path.isfile(path) and any('docker' in line for line in open(path))
-    )
-
-
-docker = is_docker()
 # Change secrets variables accordingly
-if docker is True:  # Use Docker ENV variables
-    API_KEY = os.getenv('CENSUS_API_KEY') or 's:example'
-    LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
-else:  # Use .env file for secrets
+if is_docker() is False:  # Use .env file for secrets
     load_dotenv()
-    API_KEY = os.getenv('API_KEY') or 's:example'
-    LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
 
-DEBUG = logging.DEBUG
-INFO = logging.INFO
-WARNING = logging.WARNING
-ERROR = logging.ERROR
-CRITICAL = logging.CRITICAL
+
+API_KEY = os.getenv('API_KEY') or 's:example'
+LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
+REDIS_HOST = os.getenv('REDIS_HOST') or 'localhost'
+REDIS_PORT = os.getenv('REDIS_PORT') or 6379
+REDIS_DB = os.getenv('REDIS_DB') or 0
+REDIS_PASS = os.getenv('REDIS_PASS') or None
 
 
 # Configure logging
-class CustomFormatter(logging.Formatter):
+# class CustomFormatter(logging.Formatter):
 
-    grey = "\x1b[38;20m"
-    blue = "\x1b[34m"
-    yellow = "\x1b[33;20m"
-    red = "\x1b[31;20m"
-    bold_red = "\x1b[31;1m"
-    reset = "\x1b[0m"
-    format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
+#     grey = "\x1b[38;20m"
+#     blue = "\x1b[34m"
+#     yellow = "\x1b[33;20m"
+#     red = "\x1b[31;20m"
+#     bold_red = "\x1b[31;1m"
+#     reset = "\x1b[0m"
+#     format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
 
-    FORMATS = {
-        logging.DEBUG: grey + format + reset,
-        logging.INFO: blue + format + reset,
-        logging.WARNING: yellow + format + reset,
-        logging.ERROR: red + format + reset,
-        logging.CRITICAL: bold_red + format + reset
-    }
+#     FORMATS = {
+#         logging.DEBUG: grey + format + reset,
+#         logging.INFO: blue + format + reset,
+#         logging.WARNING: yellow + format + reset,
+#         logging.ERROR: red + format + reset,
+#         logging.CRITICAL: bold_red + format + reset
+#     }
 
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        dt_fmt = '%m/%d/%Y %I:%M:%S'
-        formatter = logging.Formatter(log_fmt, dt_fmt)
-        return formatter.format(record)
+#     def format(self, record):
+#         log_fmt = self.FORMATS.get(record.levelno)
+#         dt_fmt = '%m/%d/%Y %I:%M:%S'
+#         formatter = logging.Formatter(log_fmt, dt_fmt)
+#         return formatter.format(record)
 
 
-# Create logger
-log = logging.getLogger('census')
-if not LOG_LEVEL:
-    log.setLevel(logging.INFO)
+# # Create logger
+# log = logging.getLogger('census')
+# if not LOG_LEVEL:
+#     log.setLevel(logging.INFO)
+# else:
+#     log.setLevel(LOG_LEVEL)
+
+# handler = logging.StreamHandler()
+# handler.setFormatter(CustomFormatter())
+# log.addHandler(handler)
+
+auraxium_log = logging.getLogger('auraxium')
+
+if LOG_LEVEL == 'INFO':
+    auraxium_log.setLevel(logging.WARNING)
 else:
-    log.setLevel(LOG_LEVEL)
+    auraxium_log.setLevel(LOG_LEVEL)
 
-handler = logging.StreamHandler()
-handler.setFormatter(CustomFormatter())
-log.addHandler(handler)
-
-if LOG_LEVEL == 'DEBUG':
-    auraxium_log = logging.getLogger('auraxium')
-    auraxium_log.setLevel(logging.DEBUG)
-    auraxium_log.addHandler(handler)
+auraxium_log.addHandler(logging.StreamHandler)
 
 # Setup sqlite
-
 sql_create_connery_table = """ CREATE TABLE IF NOT EXISTS connery (
                                     id integer PRIMARY KEY,
                                     continent text,
@@ -225,7 +217,7 @@ async def db_setup():
         f = open("continents.db", "x")
         f.close
     except FileExistsError:
-        log.info("Found existing database!")
+        log.debug("Found existing database!")
     else:
         log.info("Database not found. Created a new one!")
 
@@ -255,56 +247,58 @@ async def db_setup():
                 log.error(error)
 
 
-async def main(loop: bool):
+async def main(redis_host: str,
+               redis_port: int,
+               redis_db: int,
+               redis_pass: str,
+               loop: bool = True,
+               ):
     await db_setup()
-    while True:
-        async with auraxium.Client(service_id=API_KEY) as client:
-            log.info("Querying API...")
-            t = time.perf_counter()
-            for i in WORLD_IDS:  # Server names
-                server_id = WORLD_IDS[i]  # Save server id
-                try:
-                    # Get open continents of server_id
-                    open_continents = await _get_open_zones(client, server_id)
-                except auraxium.errors.ServerError as ServerError:  # Handle Unknown server error
-                    log.error(ServerError)
-                    pass
-                # List open continents with names
-                named_open_continents = []
-                for s in open_continents:
-                    named_open_continents.append(_ZONE_NAMES[s])
-                continent_status = {
-                    'Amerish': 'closed',
-                    'Esamir': 'closed',
-                    'Hossin': 'closed',
-                    'Indar': 'closed',
-                    'Oshur': 'closed'
-                }
-                for s in named_open_continents:
-                    if s in continent_status:
-                        continent_status[s] = 'open'
-                db = await aiosqlite.connect('continents.db')
-                timestamp = time.time()
-                server_table = [
-                    (continent_status['Amerish'], timestamp, '1'),
-                    (continent_status['Esamir'], timestamp, '2'),
-                    (continent_status['Hossin'], timestamp, '3'),
-                    (continent_status['Indar'], timestamp, '4'),
-                    (continent_status['Oshur'], timestamp, '5')
-                ]
-                await db.executemany(
-                    f"UPDATE {i} SET status = ?, time = ? WHERE id = ?;", server_table)
-                log.info(f"Updated {i}")
-                await db.commit()
-                await db.close()
-                await asyncio.sleep(6)
-            elapsed = time.perf_counter() - t
-            log.info(f"Query completed in {round(elapsed, 2)}s")
-            if loop is False:
+    # while True:
+    async with auraxium.Client(service_id=API_KEY) as client:
+        log.debug("Querying API...")
+        t = time.perf_counter()
+        for i in WORLD_IDS:  # Server names
+            server_id = WORLD_IDS[i]  # Save server id
+            try:
+                # Get open continents of server_id
+                open_continents = await _get_open_zones(client, server_id)
+            except auraxium.errors.ServerError as ServerError:  # Handle Unknown server error
+                log.warning(ServerError)
                 break
-            sleep_time = 60
-            log.info(f"Sleeping for {sleep_time}s...")
-            await asyncio.sleep(sleep_time)
+            # List open continents with names
+            named_open_continents: list = []
+            for s in open_continents:
+                named_open_continents.append(_ZONE_NAMES[s])
+            continent_status = {
+                'Amerish': 'closed',
+                'Esamir': 'closed',
+                'Hossin': 'closed',
+                'Indar': 'closed',
+                'Oshur': 'closed'
+            }
+            for s in named_open_continents:
+                if s in continent_status:
+                    continent_status[s] = 'open'
+            db = await aiosqlite.connect('continents.db')
+            timestamp = time.time()
+            server_table = [
+                (continent_status['Amerish'], timestamp, '1'),
+                (continent_status['Esamir'], timestamp, '2'),
+                (continent_status['Hossin'], timestamp, '3'),
+                (continent_status['Indar'], timestamp, '4'),
+                (continent_status['Oshur'], timestamp, '5')
+            ]
+            await db.executemany(
+                f"UPDATE {i} SET status = ?, time = ? WHERE id = ?;", server_table)
+            log.debug(f"Updated {i}")
+            await db.commit()
+            await db.close()
+            await asyncio.sleep(6)
+        elapsed = time.perf_counter() - t
+        log.debug(f"Query completed in {round(elapsed, 2)}s")
+        await asyncio.sleep(1)
+
 
 # For running census_client.py independently of bot.py for development
 if __name__ == '__main__':
